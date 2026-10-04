@@ -1,0 +1,240 @@
+// Enriches catalog entries with everything the Discover page shows:
+//   tags      platforms, game modes, full genre list, themes/setting, developer, publisher (Wikidata)
+//   franchise media franchise (Wikidata), falling back to series
+//   keywords  Steam user tags (SteamSpy), cached on disk because SteamSpy allows ~1 request/second
+//   covers    portrait cover candidates, best first: Steam library art, Wikipedia infobox image
+//   links     where to get the game: Steam, GOG, Epic, Nintendo eShop, PlayStation Store, itch.io, Wikipedia
+// No API keys needed.
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+const ENDPOINT = 'https://query.wikidata.org/sparql';
+const UA = 'vgm-shuffle/0.3 (personal hobby project; catalog build)';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function sparql(query) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/sparql-results+json', 'User-Agent': UA },
+      body: new URLSearchParams({ query }),
+    });
+    if (res.ok) return (await res.json()).results.bindings;
+    await sleep(3000 * (attempt + 1));
+  }
+  throw new Error('SPARQL failed repeatedly');
+}
+
+const TAG_PROPS = {
+  P400: 'platform',
+  P404: 'mode',
+  P136: 'genre',
+  P921: 'theme',
+  P840: 'theme',
+  P178: 'developer',
+  P123: 'publisher',
+  P8345: 'franchise',
+};
+
+const LINK_PROPS = {
+  P1733: ['Steam', (v) => `https://store.steampowered.com/app/${v}/`],
+  P2725: ['GOG', (v) => `https://www.gog.com/${v}`],
+  P6278: ['Epic Games', (v) => `https://store.epicgames.com/p/${v}`],
+  P8084: ['Nintendo eShop', (v) => `https://www.nintendo.com/us/store/products/${v}/`],
+  P5944: ['PlayStation Store', (v) => `https://store.playstation.com/en-us/product/${v}`],
+  P7294: ['itch.io', (v) => v],
+};
+
+// Shorter, familiar platform names.
+const PLATFORM_NAMES = {
+  'Microsoft Windows': 'PC',
+  'Xbox Series X and Series S': 'Xbox Series X|S',
+  'Super Nintendo Entertainment System': 'SNES',
+  'Nintendo Entertainment System': 'NES',
+  'Family Computer': 'NES',
+  'Nintendo GameCube': 'GameCube',
+  'PlayStation': 'PlayStation',
+  'Sega Mega Drive': 'Mega Drive / Genesis',
+  'Sega Genesis': 'Mega Drive / Genesis',
+  'Classic Mac OS': 'Mac',
+  macOS: 'Mac',
+  'Android': 'Android',
+  'iOS': 'iOS',
+  'Linux': 'Linux',
+};
+const SKIP_PLATFORMS = /^(arcade video game|cloud gaming|web browser|virtual reality|Xbox Cloud Gaming|GeForce Now|Amazon Luna|Super NES Classic Edition|NES Classic Edition|PlayStation Classic|iPadOS|tvOS|Windows Phone|Ouya|N-Gage.*)$/i;
+
+const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+export async function enrichGames(games, { log = console.log, cacheFile } = {}) {
+  const byId = new Map(games.map((g) => [g.id, g]));
+  const ids = games.filter((g) => /^Q\d+$/.test(g.id)).map((g) => g.id);
+  for (const g of games) {
+    g.tags ??= {};
+    g.links ??= [];
+    g.covers ??= [];
+  }
+
+  // 1. Tags + franchise ---------------------------------------------------------------
+  log(`Tags for ${ids.length} games…`);
+  const propValues = Object.keys(TAG_PROPS).map((p) => `(wdt:${p} "${p}")`).join(' ');
+  for (let i = 0; i < ids.length; i += 150) {
+    const batch = ids.slice(i, i + 150);
+    const rows = await sparql(`
+      SELECT ?game ?prop ?valLabel WHERE {
+        VALUES ?game { ${batch.map((id) => 'wd:' + id).join(' ')} }
+        VALUES (?wdt ?prop) { ${propValues} }
+        ?game ?wdt ?val .
+        OPTIONAL { ?val rdfs:label ?en FILTER(LANG(?en) = "en") }
+        OPTIONAL { ?val rdfs:label ?mul FILTER(LANG(?mul) = "mul") }
+        BIND(COALESCE(?en, ?mul) AS ?valLabel)
+        FILTER(BOUND(?valLabel))
+      }`);
+    for (const r of rows) {
+      const g = byId.get(r.game.value.split('/').pop());
+      const kind = TAG_PROPS[r.prop.value];
+      let v = r.valLabel.value;
+      if (kind === 'franchise') {
+        g.franchise ??= v.replace(/\s*\((media )?franchise\)$/i, '');
+        continue;
+      }
+      if (kind === 'platform') {
+        if (SKIP_PLATFORMS.test(v)) continue;
+        v = PLATFORM_NAMES[v] ?? v;
+      }
+      if (kind === 'genre' && /^video game (with|featuring|about|based)/i.test(v)) continue;
+      if (kind === 'genre' || kind === 'theme' || kind === 'mode') v = titleCase(v.replace(/ video game$/i, ''));
+      const list = (g.tags[kind] ??= []);
+      if (!list.includes(v)) list.push(v);
+    }
+  }
+
+  // 2. Store links + English Wikipedia article ------------------------------------------
+  log('Store links…');
+  const linkValues = Object.keys(LINK_PROPS).map((p) => `(wdt:${p} "${p}")`).join(' ');
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200);
+    const rows = await sparql(`
+      SELECT ?game ?prop ?val ?wiki WHERE {
+        VALUES ?game { ${batch.map((id) => 'wd:' + id).join(' ')} }
+        {
+          VALUES (?wdt ?prop) { ${linkValues} }
+          ?game ?wdt ?val .
+        } UNION {
+          ?article schema:about ?game ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?wiki .
+        }
+      }`);
+    for (const r of rows) {
+      const g = byId.get(r.game.value.split('/').pop());
+      if (r.wiki) {
+        g.wiki = r.wiki.value;
+        continue;
+      }
+      const [label, url] = LINK_PROPS[r.prop.value];
+      if (!g.links.some((l) => l.label === label)) g.links.push({ label, url: url(r.val.value) });
+    }
+  }
+  for (const g of games) {
+    if (g.wiki && !g.links.some((l) => l.label === 'Wikipedia'))
+      g.links.push({ label: 'Wikipedia', url: `https://en.wikipedia.org/wiki/${encodeURIComponent(g.wiki.replace(/ /g, '_'))}` });
+  }
+
+  // 3. Covers: Steam portrait art first, Wikipedia infobox image as fallback -----------------
+  log('Covers…');
+  const withWiki = games.filter((g) => g.wiki);
+  for (let i = 0; i < withWiki.length; i += 50) {
+    const batch = withWiki.slice(i, i + 50);
+    const params = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      prop: 'pageimages',
+      piprop: 'thumbnail',
+      pithumbsize: '400',
+      pilicense: 'any',
+      redirects: '1',
+      titles: batch.map((g) => g.wiki).join('|'),
+    });
+    const res = await fetch(`https://en.wikipedia.org/w/api.php?${params}`, { headers: { 'User-Agent': UA } });
+    if (!res.ok) continue;
+    const q = (await res.json()).query ?? {};
+    const alias = new Map();
+    for (const n of [...(q.normalized ?? []), ...(q.redirects ?? [])]) alias.set(n.to, n.from);
+    const thumbByTitle = new Map();
+    for (const p of Object.values(q.pages ?? {})) {
+      if (!p.thumbnail) continue;
+      const url = p.thumbnail.source.replace(/\?.*$/, '');
+      let t = p.title;
+      thumbByTitle.set(t, url);
+      while (alias.has(t)) thumbByTitle.set((t = alias.get(t)), url);
+    }
+    for (const g of batch) {
+      const url = thumbByTitle.get(g.wiki);
+      if (url) g.wikiCover = url;
+    }
+  }
+  for (const g of games) {
+    const covers = [];
+    if (g.steam) covers.push(`https://cdn.cloudflare.steamstatic.com/steam/apps/${g.steam}/library_600x900.jpg`);
+    if (g.wikiCover) covers.push(g.wikiCover);
+    for (const c of g.covers) if (!covers.includes(c)) covers.push(c);
+    g.covers = covers;
+    delete g.wikiCover;
+  }
+
+  // 3b. Roblox games: game icon as cover, game page as link (icon URLs expire, so re-fetched each build).
+  const roblox = games.filter((g) => g.roblox?.universeId);
+  if (roblox.length) {
+    const res = await fetch(
+      `https://thumbnails.roblox.com/v1/games/icons?universeIds=${roblox.map((g) => g.roblox.universeId).join(',')}&size=512x512&format=Png&isCircular=false`,
+    ).catch(() => null);
+    const icons = new Map(((await res?.json().catch(() => null))?.data ?? []).map((d) => [d.targetId, d.imageUrl]));
+    for (const g of roblox) {
+      const icon = icons.get(g.roblox.universeId);
+      if (icon) g.covers = [icon, ...g.covers.filter((c) => !c.includes('rbxcdn.com'))];
+      if (!g.links.some((l) => l.label === 'Roblox'))
+        g.links.unshift({ label: 'Roblox', url: `https://www.roblox.com/games/${g.roblox.placeId}` });
+    }
+  }
+
+  // 4. Keywords: Steam user tags via SteamSpy (cached; ~1 request/second) -----------------------
+  const cache = cacheFile && existsSync(cacheFile) ? JSON.parse(readFileSync(cacheFile, 'utf8')) : {};
+  const steamGames = games.filter((g) => g.steam);
+  const missing = steamGames.filter((g) => !(g.steam in cache));
+  log(`Steam tags: ${steamGames.length - missing.length} cached, ${missing.length} to fetch (~${Math.ceil(missing.length / 60)} min)…`);
+  let n = 0;
+  for (const g of missing) {
+    try {
+      const res = await fetch(`https://steamspy.com/api.php?request=appdetails&appid=${g.steam}`, { headers: { 'User-Agent': UA } });
+      const data = res.ok ? await res.json() : null;
+      const tags = data?.tags && !Array.isArray(data.tags) ? data.tags : {};
+      cache[g.steam] = Object.entries(tags)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([t]) => t);
+    } catch {
+      /* leave uncached; retried next build */
+    }
+    if (++n % 100 === 0 && cacheFile) {
+      mkdirSync(dirname(cacheFile), { recursive: true });
+      writeFileSync(cacheFile, JSON.stringify(cache));
+      log(`  ${n}/${missing.length}`);
+    }
+    await sleep(1050);
+  }
+  if (cacheFile) {
+    mkdirSync(dirname(cacheFile), { recursive: true });
+    writeFileSync(cacheFile, JSON.stringify(cache));
+  }
+  for (const g of steamGames) if (cache[g.steam]?.length) g.keywords = cache[g.steam];
+
+  // Drop empty containers to keep the JSON small.
+  for (const g of games) {
+    for (const k of Object.keys(g.tags)) if (!g.tags[k].length) delete g.tags[k];
+    if (!Object.keys(g.tags).length) delete g.tags;
+    if (!g.links.length) delete g.links;
+    if (!g.covers.length) delete g.covers;
+    delete g.wiki;
+  }
+  return games;
+}

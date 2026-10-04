@@ -1,0 +1,25 @@
+# Dependencies & build output
+node_modules/
+dist/
+
+# Runtime data: monthly-refreshed catalog, Steam keyword cache (see docs/data-pipeline.md)
+/data/
+
+# Personal config: copy config/my-games.example.json to config/my-games.json
+config/*
+!config/*.example.json
+
+# Secrets (see .env.example)
+.env
+.env.*
+!.env.example
+
+# User data: library backups, Steam exports
+vgm-library*.json
+steam-library.*
+*-backup*.json
+
+# Local tooling
+.claude/
+.vscode/
+*.log

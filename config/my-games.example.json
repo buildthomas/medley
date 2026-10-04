@@ -1,0 +1,18 @@
+[
+  {
+    "id": "u:my-example-game",
+    "title": "My Example Game",
+    "year": 2025,
+    "genres": ["Roblox", "Adventure"],
+    "series": "My Series",
+    "franchise": "My Series",
+    "composers": ["Composer Name"],
+    "sources": [
+      "https://www.youtube.com/playlist?list=PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "https://www.youtube.com/watch?v=xxxxxxxxxxx"
+    ],
+    "roblox": { "universeId": 1234567890, "placeId": 1234567890 },
+    "links": [{ "label": "Roblox", "url": "https://www.roblox.com/games/1234567890" }],
+    "tags": { "platform": ["Roblox"], "developer": ["My Studio"], "mode": ["Multiplayer"] }
+  }
+]
