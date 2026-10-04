@@ -32,7 +32,7 @@
 13. **`endSeconds` doesn't reliably fire ENDED** for slices → the player also checks the clock
     every 500 ms.
 14. **Roblox icon URLs expire** (`180DAY-…`) → refreshed monthly into `data/my-games.json`; don't
-    treat the URLs in `config/my-games.json` as permanent.
+    treat the URLs in `my-games.json` as permanent.
 15. **Two "Doom"s** (1993 and 2016) share a title → anything that resolves titles must pick by
     popularity (`starterGames`, Steam name matching) and never assume titles are unique.
 16. **Headset "next" did nothing** → media keys go to the frame that plays audio (YouTube's iframe),

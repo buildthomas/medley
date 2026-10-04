@@ -2,8 +2,9 @@
 // artists, collections). `--only games,anime` limits it to some domains; the collections file
 // keeps the other domains' groups from the previous build.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { buildAll, keepMissingGroups } from './build-all.mjs';
+import { medleyPaths } from './paths.mjs';
 
 const args = process.argv.slice(2);
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : undefined;
@@ -11,7 +12,7 @@ const dir = new URL('../src/data/', import.meta.url);
 
 const files = await buildAll({
   only,
-  cacheFile: fileURLToPath(new URL('../data/cache/steamspy-tags.json', import.meta.url)),
+  cacheFile: join(medleyPaths().dataDir, 'cache', 'steamspy-tags.json'),
 });
 
 // Domains skipped by --only (or that failed) keep their previous collection groups.

@@ -21,7 +21,10 @@ const FILE_OF_DOMAIN = { game: 'catalog', screen: 'screen', anime: 'anime', arti
 export function keepMissingGroups(files, prev) {
   if (!prev) return files;
   const kept = prev.groups.filter((g) => !(FILE_OF_DOMAIN[g.domain ?? 'game'] in files));
-  files.collections.groups = [...kept, ...files.collections.groups];
+  const order = Object.keys(FILE_OF_DOMAIN);
+  const rank = (g) => order.indexOf(g.domain ?? 'game');
+  // Stable sort: domains in a fixed order, groups within a domain as built.
+  files.collections.groups = [...kept, ...files.collections.groups].sort((a, b) => rank(a) - rank(b));
   return files;
 }
 

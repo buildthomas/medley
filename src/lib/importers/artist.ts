@@ -111,12 +111,53 @@ export async function parseSongVideo(videoId: string): Promise<ParsedSong> {
     return { videoId, song, artist: artists[0] ?? v.channel.replace(CHANNEL_NOISE, ''), featuring: artists.slice(1), album: lines[2], duration: v.duration };
   }
   const channelArtist = v.channel.replace(CHANNEL_NOISE, '').replace(CHANNEL_NOISE, '').trim();
+  const { artistNames } = await loadCatalog();
   const dash = v.title.split(/\s[-–—]\s/);
   if (dash.length >= 2) {
-    const artistPart = dash[0].replace(/\s+(feat\.?|ft\.?|x|&)\s+.*$/i, '').trim();
-    return { videoId, song: cleanSongTitle(dash.slice(1).join(' - '), artistPart), artist: artistPart, featuring: [], duration: v.duration };
+    // "Lady Gaga, Bruno Mars - Die With A Smile": the uploading channel is the main artist
+    // when it's among the credits; the others are featured.
+    const credits = splitCredits(dash[0], artistNames);
+    const main = credits.find((c) => normalize(c) === normalize(channelArtist)) ?? credits[0];
+    const { title, featuring } = splitFeaturing(dash.slice(1).join(' - '), artistNames);
+    return {
+      videoId,
+      song: cleanSongTitle(title, main),
+      artist: main,
+      featuring: unique([...credits.filter((c) => c !== main), ...featuring]),
+      duration: v.duration,
+    };
   }
-  return { videoId, song: cleanSongTitle(v.title, channelArtist), artist: channelArtist, featuring: [], duration: v.duration };
+  const { title, featuring } = splitFeaturing(v.title, artistNames);
+  return { videoId, song: cleanSongTitle(title, channelArtist), artist: channelArtist, featuring, duration: v.duration };
+}
+
+const unique = (names: string[]) => [...new Map(names.map((n) => [normalize(n), n])).values()];
+
+/** "Lady Gaga, Bruno Mars" → both; "Earth, Wind & Fire" (a known artist) stays whole. */
+function splitCredits(s: string, known: Set<string>): string[] {
+  const whole = s.trim();
+  if (known.has(normalize(whole))) return [whole];
+  return whole
+    .split(/\s*,\s*|\s+&\s+|\s+x\s+|\s+(?:feat\.?|ft\.?|featuring)\s+/i)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Pulls featured artists out of a song title: "Levitating Featuring DaBaby",
+ * "Song (feat. A & B)", "Song [with C]". A bare "with" isn't a credit ("Die With A Smile").
+ */
+function splitFeaturing(title: string, known: Set<string>): { title: string; featuring: string[] } {
+  const featuring: string[] = [];
+  let t = title.replace(/\s*[([]\s*(?:feat\.?|ft\.?|featuring|with)\s+([^)\]]+)[)\]]/gi, (_m, names: string) => {
+    featuring.push(...splitCredits(names, known));
+    return '';
+  });
+  t = t.replace(/\s+(?:feat\.?|ft\.?|featuring)\s+(.+?)(?=\s*[([]|$)/i, (_m, names: string) => {
+    featuring.push(...splitCredits(names, known));
+    return '';
+  });
+  return { title: t.trim(), featuring };
 }
 
 /** Find (or create) the artist work for a name: catalog first, then a custom entry. */

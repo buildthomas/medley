@@ -1,6 +1,6 @@
 // Builds the game catalog and curated collections. Used by:
 //   - scripts/build-catalog.mjs   (npm run catalog: writes the bundled src/data/*.json)
-//   - the dev server's /api/refresh (monthly in-app refresh: writes data/*.json)
+//   - the server's weekly refresh (server/api.ts: writes the data dir, see scripts/paths.mjs)
 //
 // Collections:
 //   - Nintendo first-party (published by Nintendo / The Pokémon Company), per console
@@ -256,7 +256,7 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
   // Covers, tags, keywords, store links (see enrich.mjs). Steam keywords are cached across builds.
   if (enrich) await enrichGames(catalog, { log, cacheFile });
 
-  // "My games" is not part of the build: it's personal config (config/my-games.json),
+  // "My games" is not part of the build: it's personal config (my-games.json in the config dir),
   // served by the local server and merged in by the client (src/lib/catalog.ts).
   const collections = {
     generatedAt: new Date().toISOString(), // full timestamp: the client prefers the newest copy

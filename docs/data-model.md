@@ -85,6 +85,7 @@ Backups (`exportLibrary`) include all five tables, so bookkeeping travels with t
 | localStorage | `vgm-shuffle:volume` | `{ volume, muted }` |
 | localStorage | `vgm-shuffle:open-sections` | Which filter sections are expanded |
 | localStorage | `vgm-shuffle:discover-domain` | Last Discover domain tab |
+| localStorage | `vgm-shuffle:remote` | Desktop companion: `{ enabled, key }` (the channel key; see `src/lib/remote.ts`) |
 | localStorage | `vgm-shuffle:anime-scope` | What adding an anime imports: `all` / `songs` / `oped` / `op` |
 | localStorage | `vgm-shuffle:cover-backdrops` | Cover URL → `light`/`dark`/`none` (transparent-logo analysis cache) |
 

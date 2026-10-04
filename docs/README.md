@@ -11,7 +11,8 @@ short summary so you can stop early.
 | [youtube-import.md](youtube-import.md) | work on finding/importing music: scraping, ranking, title cleaning, per-domain importers, bulk import, source sync |
 | [shuffle.md](shuffle.md) | change what plays next: the picker and Variety, filters and facets, programs, queue, resume, pop-out |
 | [ui.md](ui.md) | change screens or styling: views, Discover components, CSS conventions |
-| [operations.md](operations.md) | run scripts, configure personal data/keys, back up or bulk-import a library |
+| [operations.md](operations.md) | run scripts, find where data/config live, use the desktop companion, back up or bulk-import a library |
+| [hosting.md](hosting.md) | deploy it: production server, Docker, env vars, password, what's stored where |
 | [gotchas.md](gotchas.md) | hit something weird. Known traps and their fixes |
 | [roadmap.md](roadmap.md) | look for what to build next, or why something isn't built |
 

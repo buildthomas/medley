@@ -31,16 +31,19 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
 | `src/lib/` | Logic without UI: shuffle (`picker.ts`), importing (`importer.ts`, `importers/anime.ts`, `importers/artist.ts`, `parse.ts`), catalog (`catalog.ts`), search, background jobs (`bulk.ts`, `updater.ts`, `sync.ts`) |
 | `src/components/` | Views; `discover/` holds the cover-art browsing UI |
 | `src/data/` | **Generated, committed** public catalogs (`catalog.json` games, `screen.json`, `anime.json`, `artists.json`, `collections.json`). Rebuilt by `npm run catalog` |
-| `server/` | Vite plugin serving `/api/*`: keyless YouTube scraping, Steam, MusicBrainz artist search, catalog refresh, personal games |
+| `server/` | `/api/*` (`api.ts`: YouTube scraping, Steam, MusicBrainz, catalog refresh, personal games; `remote.ts`: companion relay), mounted by `plugin.ts` in dev and `serve.ts` in production |
 | `scripts/` | One builder per domain (`catalog-`, `screen-`, `anime-`, `artist-builder.mjs`, combined by `build-all.mjs`), shared Wikidata helpers (`wd.mjs`), enrichment, headless bulk importer |
-| `config/` | **Personal, gitignored** (`my-games.json`); only `*.example.json` is committed |
-| `data/` | **Runtime, gitignored**: weekly-refreshed catalogs, Steam keyword cache |
+| `companion/` | Desktop companion (Electron, own `package.json`): always-on-top now-playing window, talks to `/api/remote/*` |
+| `config/` | Only `my-games.example.json`. Real personal config lives **outside the repo** (`scripts/paths.mjs`) |
+| `Dockerfile` | Production image (`server/serve.ts`); see [docs/hosting.md](docs/hosting.md) |
 | `docs/` | Everything else you need to know |
 
 ## Rules that matter
 
-1. **Never commit personal or runtime data.** `config/*` (except examples), `/data/`, `.env*`,
-   `vgm-library*.json`, `steam-library.*` are gitignored on purpose. The user's library lives in
+1. **Never commit personal or runtime data, and don't write it into the repo.** Runtime data and
+   personal config go to `medleyPaths()` (`scripts/paths.mjs`: OS app folders, or
+   `MEDLEY_DATA_DIR` / `MEDLEY_CONFIG_DIR`). `config/*` (except examples), `/data/`, `.env*`,
+   backups and `steam-library.*` stay gitignored as a safety net. The user's library lives in
    their browser's IndexedDB, never in the repo.
 2. **No API keys are required for anything core.** Keep it that way. Optional keys go in `.env.local`
    (see `.env.example`) and features must degrade gracefully without them.

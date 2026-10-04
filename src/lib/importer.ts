@@ -112,6 +112,9 @@ function classifyScreenTrack(rawTitle: string, channel: string | undefined, ctx:
     // In a musical, "Song - Performer" is a sung number even when the performer is an actor.
     if (ctx.musical && usable(left) && usable(right)) return song();
   }
+  // A musical's soundtrack is mostly its numbers: without other clues, a track that doesn't
+  // look like a score cue is sung ("Honey, Honey", "Dancing Queen").
+  if (ctx.musical && !SCORE_CUE.test(rawTitle.replace(/^\s*\d+\s*[-.):]?\s*/, ''))) return song();
   return { vocal: undefined, role: undefined };
 }
 
@@ -396,6 +399,11 @@ export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHi
         .split(' ')
         .filter((w) => w && !FILLER.has(w) && !/^\d+$/.test(w));
       score -= 2.5 * Math.min(before.length, 3) + 0.75 * Math.min(after.length, 4);
+      // A number right after the title is another installment ("Mamma Mia 2 Soundtrack",
+      // "Doom 2 OST", "… Season 2"); "1 & 2" playlists mix the sequel in.
+      const next = t.slice(t.indexOf(target) + target.length).trim();
+      if (/(^|\s)(1|i)( and)? (2|ii)\b/.test(next)) score -= 3;
+      else if (/^(part |season |s)?([2-9]|ii|iii|iv|vi)\b/.test(next)) score -= 6;
       if (kindOf(game) === 'game') {
         const matched = matcher.match(hit.title);
         // e.g. searching "Final Fantasy VII" but the playlist is "Final Fantasy VII Remake".

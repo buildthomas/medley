@@ -24,6 +24,24 @@ export const UPDATE_INTERVAL = 7 * DAY;
 const RETRY_AFTER = DAY; // when the refresh itself failed (offline, Wikidata down…)
 const RETRY_FAILED_AFTER = 7 * DAY;
 
+/** Server-side catalog refresh status (server/api.ts). */
+interface RefreshStatus {
+  state: 'idle' | 'running' | 'error';
+  generatedAt: string | null;
+  startedAt?: number;
+  error?: string;
+  log: string[];
+}
+
+async function refreshCall(method: 'GET' | 'POST', force = false): Promise<RefreshStatus | null> {
+  try {
+    const res = await fetch(`/api/refresh${force ? '?force=1' : ''}`, { method });
+    return res.ok ? ((await res.json()) as RefreshStatus) : null;
+  } catch {
+    return null;
+  }
+}
+
 const allIds = (c: Collections) => c.groups.flatMap((g) => g.lists.flatMap((l) => l.ids));
 
 // --- status for the UI ---------------------------------------------------------
@@ -132,11 +150,19 @@ export async function runUpdate(force = false) {
 
     await setMeta('lastRefreshAttemptAt', now);
 
-    // 1. Catalog.
+    // 1. Catalogs. The server rebuilds them in the background when they're about a week old
+    //    (a hosted server also does this on its own schedule); we wait for it to finish.
     setStatus({ state: 'refreshing', message: 'Looking for new titles on Wikidata, Steam and AniList…' });
-    const res = await fetch('/api/refresh', { method: 'POST' }).catch(() => null);
-    if (!res?.ok) {
-      const err = res ? ((await res.json().catch(() => ({}))).error ?? res.status) : 'server unreachable';
+    let refresh = await refreshCall('POST', force);
+    const startedWaiting = Date.now();
+    while (refresh?.state === 'running' && Date.now() - startedWaiting < 3 * 60 * 60 * 1000) {
+      const minutes = Math.round((Date.now() - (refresh.startedAt ?? Date.now())) / 60000);
+      setStatus({ message: `Rebuilding the catalogs (${minutes} min so far, usually ~30)… ${refresh.log.at(-1) ?? ''}` });
+      await new Promise((r) => setTimeout(r, 15_000));
+      refresh = await refreshCall('GET');
+    }
+    if (!refresh || refresh.state !== 'idle') {
+      const err = refresh?.error ?? (refresh ? 'still running' : 'server unreachable');
       setStatus({ state: 'error', message: `Update failed (${err}); will retry tomorrow.` });
       return;
     }

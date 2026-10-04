@@ -3,7 +3,8 @@
 **Summary:** one builder per domain decides which titles exist and which collections they're
 in. `scripts/build-all.mjs` runs them all (each independently: a failing domain keeps its old
 data). Output is committed as `src/data/*.json` and refreshed weekly at runtime into
-`data/*.json`. Personal games come from `config/my-games.json`. No API keys anywhere.
+the server's data dir (`MEDLEY_DATA_DIR`, outside the repo; see `scripts/paths.mjs`). Personal
+games come from `my-games.json` in the config dir. No API keys anywhere.
 
 ## Builders
 
@@ -60,7 +61,7 @@ list: `GET /api/artists/search` → MusicBrainz (server/artists.ts, 1 req/s).
 | Run by | Writes | Committed? |
 |---|---|---|
 | `npm run catalog` (`scripts/build-catalog.mjs`, `--only games,screen,anime,artists`) | `src/data/*.json` | Yes: the out-of-the-box catalogs |
-| Weekly refresh (`POST /api/refresh` → `buildAll`) | `data/*.json` (only the domains that succeeded) + `data/my-games.json` | No |
+| Weekly refresh (`server/api.ts` → `buildAll`) | `<data dir>/*.json` (only the domains that succeeded) + `my-games.json` covers | No (outside the repo) |
 
 The client (`src/lib/catalog.ts`) loads the bundled files and asks the server
 (`/api/data?name=…`, whitelist `DATA_FILES`) for refreshed ones; it uses the refreshed set only if
@@ -72,7 +73,10 @@ domains' collection groups.
 Runs a few seconds after start-up if 7 days have passed since `meta.lastRefreshAt` (1 day after
 a failed attempt); **check now** forces it.
 
-1. `POST /api/refresh` → reload catalogs → `syncLibraryMeta()` (kind, franchise, tags…).
+1. `POST /api/refresh` asks the server to rebuild; it only starts if its catalogs are ≥ 6.5 days
+   old (or `?force=1` from localhost / with `MEDLEY_ADMIN_TOKEN`), runs in the background, and
+   the client polls `GET /api/refresh` every 15 s. A hosted server also rebuilds on its own
+   schedule. Then: reload catalogs → `syncLibraryMeta()` (kind, franchise, tags…).
 2. New ids in subscribed collection groups (not seen before, not in the library). Unreleased
    ones stay "unseen" and are imported in the first update after their release date.
 3. `importFailures` older than 7 days whose title is now released (`!isUpcoming`).

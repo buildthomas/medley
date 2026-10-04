@@ -5,12 +5,16 @@
 // Needs the dev server running (npm run dev) for YouTube access.
 //
 //   npx tsx scripts/import-headless.ts [--groups mine,nintendo,years,indie] [--starter]
-//                                      [--out vgm-library.json] [--concurrency 6] [--retry-failed] [--fix-foreign]
+//                                      [--out file.json] [--concurrency 6] [--retry-failed] [--fix-foreign]
+//
+// --out defaults to medley-library.json in the data dir (see scripts/paths.mjs); it's printed at the end.
 //
 // Re-running with the same --out resumes: games already in the file are skipped.
 
 import 'fake-indexeddb/auto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { medleyPaths } from './paths.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name: string, fallback: string) => {
@@ -18,7 +22,7 @@ const opt = (name: string, fallback: string) => {
   return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : fallback;
 };
 const GROUPS = opt('groups', 'mine,nintendo,years,indie').split(',');
-const OUT = opt('out', 'vgm-library.json');
+const OUT = opt('out', join(medleyPaths().dataDir, 'medley-library.json'));
 const CONCURRENCY = Number(opt('concurrency', '6'));
 (globalThis as { __VGM_API_BASE__?: string }).__VGM_API_BASE__ = opt('api', 'http://localhost:5173');
 

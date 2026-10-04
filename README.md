@@ -13,8 +13,8 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-`npm start` builds and serves a production version on port 5174. The app needs its small local
-server (built into Vite) to read YouTube metadata, so it is not a static site (see *Hosting*).
+`npm start` builds and serves a production version on port 5174. The app needs its small
+server to read YouTube metadata, so it is not a static site (see *Your data and hosting*).
 
 ## Four kinds of music
 
@@ -117,20 +117,37 @@ program first; the normal shuffle resumes when it's done.
 
 ## My games
 
-Your own games go in `config/my-games.json` (gitignored; copy `config/my-games.example.json`),
+Your own games go in `my-games.json` in Medley's config folder (`%APPDATA%\Medley` on Windows,
+`~/.config/medley` on Linux, `~/Library/Application Support/Medley/config` on macOS; copy
+`config/my-games.example.json`),
 each with fixed YouTube sources. They're imported once on start-up and form the *My games*
 collection.
 
+## Desktop companion
+
+A small always-on-top window that shows what's playing (cover, title, next up, progress) with
+play/pause, back, skip and like. It works with Medley in a background tab, and with a hosted Medley.
+
+```bash
+npm run companion:install   # once: downloads Electron into companion/
+npm run companion
+```
+
+Paste the code from **Add link → Desktop companion** the first time. (In Chrome/Edge, the **⧉**
+button in the player is a lighter alternative that needs no install.)
+
 ## Your data and hosting
 
-Your library (titles, tracks, plays, likes) lives in **this browser's IndexedDB**, per browser
-and per site address. Use **Add link → Backup** to move it. The catalogs ship inside the app
-bundle; weekly-refreshed catalogs and caches are written to the server's `data/` folder.
-
-Hosting on your own domain works with any Node host (`npm start`). GitHub Pages alone can't run
-the `/api` part (YouTube reading, catalog refresh); that would need porting `server/plugin.ts`
-to serverless functions (e.g. Cloudflare Workers). Each visitor would get their own library in
-their own browser.
+- **Your library** (titles, tracks, plays, likes) lives in **this browser's IndexedDB**, per
+  browser and per site address. Use **Add link → Backup** to move it.
+- **Server-side data** never lives in the code folder. Refreshed catalogs and caches go to
+  `%LOCALAPPDATA%\Medley\data` (Windows), `~/Library/Application Support/Medley/data` (macOS),
+  `~/.local/share/medley` (Linux). Your `my-games.json` goes in the config folder (`%APPDATA%\Medley`,
+  `~/.config/medley`). Override them with `MEDLEY_DATA_DIR` and `MEDLEY_CONFIG_DIR`.
+- **Hosting:** `npm run build && npm run serve` (or the `Dockerfile`) runs the app and API in one
+  Node process, with compression, an optional password (`MEDLEY_PASSWORD`), rate limiting and
+  weekly catalog refreshes. See [docs/hosting.md](docs/hosting.md). GitHub Pages alone can't run
+  the API.
 
 ## For contributors and AI agents
 

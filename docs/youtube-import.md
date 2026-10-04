@@ -27,7 +27,9 @@ Must contain the normalised game title, otherwise discarded. Then:
 when looking for "Final Fantasy VII"), −2.5 per extra word before the title and −0.75 per extra
 word after it (ignoring OST boilerplate, `FILLER`), +3 for OST words (`GOOD`), −6 for covers,
 remixes, movies, gameplay, hour-long loops (`BAD`), +1.5 official-looking channels / YouTube Music
-albums (`OLAK5uy_`), +2 for 8–250 videos, penalties for tiny or giant playlists.
+albums (`OLAK5uy_`), +2 for 8–250 videos, penalties for tiny or giant playlists. A number
+right after the title is another installment (−6: "Mamma Mia 2 Soundtrack", "Doom 2 OST",
+"… Season 2"); "1 & 2" playlists that mix in the sequel get −3.
 
 `autoAddGame` → `bestPlaylistDraft` tries the top 4 with score ≥ 5, rejects a playlist where under half
 the tracks are normal length (mostly "extended" loops), and **prefers English track names**: a playlist
@@ -67,7 +69,7 @@ are a good regression set.
 - `runBulk(label, works, { announce: true })` records what arrived in `meta.arrivals` for the
   *New since…* banner (`NewArrivals.tsx`).
 - Headless: `npx tsx scripts/import-headless.ts` (or `npm run import-all`), 6 workers, writes a
-  backup (`vgm-library.json`) every 50 games and resumes from it. See [operations.md](operations.md).
+  backup (`medley-library.json` in the data dir) every 50 games and resumes from it. See [operations.md](operations.md).
 - Expect ~15–20% "not found": mostly obscure/Japan-only Nintendo titles without playlists.
 
 ## Per-domain importers
@@ -87,7 +89,8 @@ anime "OST"/"opening". Ranking also checks `altTitles` and penalises a year mism
   explicit "instrumental"/"score" wins; uploads by a performer's *Topic* channel or a known artist
   are songs (unless the performer is the film's composer → score); titles like "(From "Frozen")",
   "feat.", "- Lyrics", or a bracketed work name → song; "Song – Artist" splits when one side is a
-  known artist.
+  known artist. In a **musical**, a track with no other clue is a song unless it looks like a
+  score cue ("Overture", "Main Title"…).
 
 ### Anime (`importers/anime.ts`)
 
@@ -114,7 +117,10 @@ them with `runBulk(…, { topUp: true })`, which doesn't skip titles already in 
   "- Topic"), 80–660 s, no live/cover/dance-practice/stage videos. Max 30 songs, deduped by
   cleaned title (`cleanSongTitle`: strips "Official Video", the artist prefix, quotes, 「」).
 - `parseSongVideo(videoId)` for *Add a song*: reads "Provided to YouTube by" descriptions
-  (song · artist · featured), else "Artist - Song", else the channel name.
+  (song · artist · featured), else "Artist - Song", else the channel name. Credits: "A, B - Song"
+  → the uploading channel's artist is the main one, the rest featured; "feat./ft./featuring X"
+  and "(with X)" are pulled out of the title (a bare "with" isn't: "Die With A Smile"); a known
+  artist name with commas/ampersands stays whole ("Earth, Wind & Fire").
 - `addSong(song)` files it under the artist (`artistWork`: a catalog artist when the name
   matches, else a new `u:artist-<slug>` work).
 

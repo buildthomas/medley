@@ -1,0 +1,255 @@
+/* Medley palette (src/styles.css): aubergine ink, coral → magenta → violet. */
+:root {
+  --bg: #14111d;
+  --raised: #1f1b2b;
+  --line: #2d2939;
+  --text: #f1ecf4;
+  --muted: #9c95a9;
+  --accent: #ff7a59;
+  --brand: linear-gradient(100deg, #ff7a59, #f0468f 55%, #8f6bff);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.35 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  user-select: none;
+}
+/* The whole window drags; controls opt out. */
+.shell {
+  position: relative;
+  height: 100%;
+  padding: 12px 14px;
+  -webkit-app-region: drag;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: radial-gradient(120% 160% at 0% 0%, rgba(255, 122, 89, 0.14), transparent 55%), var(--bg);
+}
+button,
+input,
+.cover {
+  -webkit-app-region: no-drag;
+}
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+[hidden] {
+  display: none !important;
+}
+
+/* ---- now playing ---- */
+main {
+  display: grid;
+  grid-template-columns: 98px minmax(0, 1fr);
+  gap: 14px;
+  height: 100%;
+}
+.cover {
+  width: 98px;
+  height: 98px;
+  border-radius: 10px;
+  background: var(--brand) center / cover no-repeat;
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.cover[style*='url'] {
+  background-color: var(--raised);
+}
+.info {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding-right: 64px; /* room for the window buttons */
+}
+.work {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 12px;
+}
+.work,
+.title,
+.sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.sub {
+  color: var(--muted);
+  font-size: 11.5px;
+  min-height: 15px;
+}
+.bar {
+  height: 3px;
+  margin: 6px 0 4px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+  margin-right: -64px;
+}
+#bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--brand);
+  transition: width 0.5s linear;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: -64px;
+}
+.controls button {
+  font-size: 15px;
+  opacity: 0.85;
+}
+.controls button:hover {
+  opacity: 1;
+}
+.controls .play {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+  opacity: 1;
+}
+#like.on {
+  color: #f0468f;
+}
+.time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- messages & setup ---- */
+.message {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+  padding-right: 70px;
+}
+.logo {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 44px;
+}
+.logo i {
+  width: 7px;
+  border-radius: 4px;
+  background: var(--brand);
+}
+.logo i:nth-child(1),
+.logo i:nth-child(5) {
+  height: 44px;
+}
+.logo i:nth-child(2),
+.logo i:nth-child(4) {
+  height: 31px;
+}
+.logo i:nth-child(3) {
+  height: 18px;
+}
+.headline {
+  font-size: 15px;
+  font-weight: 700;
+}
+.detail {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.err {
+  color: #ff7d8a;
+}
+.setup {
+  display: grid;
+  gap: 4px;
+  padding-right: 70px;
+}
+.row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 8px;
+}
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+button.primary {
+  background: var(--accent);
+  color: #210a04;
+  font-weight: 700;
+  border-radius: 7px;
+  padding: 5px 12px;
+}
+
+/* ---- window buttons ---- */
+.window {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  display: flex;
+  gap: 2px;
+}
+.window button {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  color: var(--muted);
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.shell:hover .window button {
+  opacity: 1;
+}
+.window button:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+#pin {
+  filter: grayscale(1);
+}
+#pin.on {
+  filter: none;
+}

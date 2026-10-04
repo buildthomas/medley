@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "start": "vite build && vite preview --port 5174",
+    "serve": "node server/serve.ts",
+    "start": "vite build && node server/serve.ts",
     "catalog": "node scripts/build-catalog.mjs",
     "typecheck": "tsc --noEmit",
-    "import-all": "tsx scripts/import-headless.ts --starter --out vgm-library.json"
+    "import-all": "tsx scripts/import-headless.ts --starter",
+    "companion": "npm --prefix companion start",
+    "companion:install": "npm --prefix companion install"
   },
   "dependencies": {
     "dexie": "^4.4.6",
@@ -27,5 +30,8 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.2"
+  },
+  "engines": {
+    "node": ">=22.18"
   }
 }

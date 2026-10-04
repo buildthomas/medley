@@ -2,7 +2,8 @@
 node_modules/
 dist/
 
-# Runtime data: monthly-refreshed catalog, Steam keyword cache (see docs/data-pipeline.md)
+# Runtime data and personal config now live outside the repo (scripts/paths.mjs); these
+# entries are a safety net for older checkouts and scratch files.
 /data/
 
 # Personal config: copy config/my-games.example.json to config/my-games.json
@@ -16,6 +17,7 @@ config/*
 
 # User data: library backups, Steam exports
 vgm-library*.json
+medley-library*.json
 steam-library.*
 *-backup*.json
 

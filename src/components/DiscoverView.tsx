@@ -199,6 +199,16 @@ export function DiscoverView({ session }: { session: Session }) {
 
   // ---- browse results ----------------------------------------------------------------
   const index = useMemo(() => gameIndex(games), [games]);
+  // While searching inside one domain, say where else the query matches ("Radiohead" in Film & TV).
+  const allIndex = useMemo(() => (domain === 'all' ? null : gameIndex(allGames)), [allGames, domain]);
+  const elsewhere = useMemo(() => {
+    if (!allIndex || !query.trim()) return [];
+    const hits = search(allIndex, query).filter(visible);
+    return DOMAINS.filter((d) => d.id !== 'all' && d.id !== domain)
+      .map((d) => ({ ...d, n: hits.filter((g) => inDomain(g, d.id)).length }))
+      .filter((d) => d.n > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allIndex, query, domain, showUpcoming]);
   const results = useMemo(() => {
     // With a query, the search decides membership and (for the default sort) the order.
     const ranked = query.trim() ? search(index, query) : null;
@@ -603,6 +613,19 @@ export function DiscoverView({ session }: { session: Session }) {
               {results.length.toLocaleString()} title{results.length === 1 ? '' : 's'} ·{' '}
               {results.filter((g) => libraryIds.has(g.id)).length} in library
             </span>
+            {elsewhere.length > 0 && (
+              <span className="muted small">
+                Also in{' '}
+                {elsewhere.map((d, i) => (
+                  <span key={d.id}>
+                    {i > 0 && ', '}
+                    <button className="link inline-link" onClick={() => setDomain(d.id)}>
+                      {d.label} ({d.n})
+                    </button>
+                  </span>
+                ))}
+              </span>
+            )}
             {missingIn(results).length > 0 && results.length <= 400 && (
               <button className="link" onClick={() => addAll(focus?.title ?? 'Filtered titles', results)}>
                 Add all {missingIn(results).length}

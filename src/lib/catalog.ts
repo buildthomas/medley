@@ -51,8 +51,8 @@ const DOMAIN_FILES = {
 
 /**
  * Catalogs for every domain + collections. Prefers the weekly-refreshed copies from the local
- * server (data/*.json) when they're newer than the bundled ones. Your own games come from the
- * server too (config/my-games.json, personal and gitignored), so edits apply on reload.
+ * server (its data dir) when they're newer than the bundled ones. Your own games come from the
+ * server too (my-games.json in its config dir, outside the repo), so edits apply on reload.
  */
 export function loadCatalog(): Promise<Loaded> {
   loading ??= (async () => {
@@ -82,7 +82,7 @@ export function loadCatalog(): Promise<Loaded> {
               {
                 id: 'mine',
                 title: 'My games',
-                description: 'Your own games, with hand-picked soundtrack sources (config/my-games.json).',
+                description: 'Your own games, with hand-picked soundtrack sources (my-games.json in Medley’s config folder).',
                 lists: [{ id: 'mine-all', title: 'All', ids: myGames.map((g) => g.id) }],
               },
             ]
