@@ -5,6 +5,8 @@ import { loadCatalog } from '../lib/catalog';
 import { commitDraft, draftFromLink, type ImportDraft } from '../lib/importer';
 import { TRACK_TYPES } from '../lib/parse';
 import type { CatalogGame } from '../types';
+import { AnimeListImport } from './AnimeListImport';
+import { SongImport } from './SongImport';
 import { SteamImport } from './SteamImport';
 import { formatTime } from './ui';
 
@@ -99,7 +101,7 @@ export function AddView() {
     const blob = new Blob([await exportLibrary()], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `vgm-shuffle-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medley-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -176,6 +178,10 @@ export function AddView() {
               </ul>
             )}
           </section>
+
+          <SongImport />
+
+          <AnimeListImport />
 
           <SteamImport />
 

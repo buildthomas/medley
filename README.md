@@ -1,8 +1,10 @@
-# VGM Shuffle
+# Medley
 
-A video game music radio with your own shuffle algorithm instead of YouTube's recommendations.
-Audio plays through YouTube's official embedded player. Everything else is local: what's in
-rotation, how tracks are picked, and what you've liked or skipped.
+Your own music radio for the things you love: **game soundtracks, anime openings and endings,
+film & TV scores and songs, and your favourite artists**, played with your own shuffle
+algorithm instead of YouTube's recommendations. Audio plays through YouTube's official embedded
+player. Everything else is local: what's in rotation, how tracks are picked, and what you've
+liked or skipped.
 
 ## Run it
 
@@ -12,132 +14,123 @@ npm run dev        # http://localhost:5173
 ```
 
 `npm start` builds and serves a production version on port 5174. The app needs its small local
-server (built into Vite) to read YouTube metadata, so it is not a static site.
+server (built into Vite) to read YouTube metadata, so it is not a static site (see *Hosting*).
+
+## Four kinds of music
+
+| Domain | Catalog | What gets imported |
+|---|---|---|
+| 🎮 Games | ~4,400 games from Wikidata + SteamSpy | The soundtrack playlist (split by chapters if it's one long video) |
+| 🌸 Anime | Top 1,200 anime from [AniList](https://anilist.co), songs from [AnimeThemes](https://animethemes.moe) | Every OP/ED/insert song by name and artist, plus the OST |
+| 🎬 Film & TV | ~3,900 films and series from Wikidata: Disney, Pixar, DreamWorks, Sony, Illumination, musicals, superhero, popular series | The score album, plus a songs album for musicals and song-heavy films |
+| 🎤 Artists | ~1,600 popular artists from Wikidata, plus live search on [MusicBrainz](https://musicbrainz.org) | Their ~30 best-known songs (official uploads only) |
+
+Tracks know whether they're **vocal** (sing-along) or instrumental, their **role** (opening,
+ending, insert song, score, song), the performing **artist**, and their **length**. So in Listen
+you can filter to e.g. *Anime → Opening only*, or *Film & TV → Vocal only* for a Disney
+sing-along.
+
+**Add a song** (under Add link) adds one song from a YouTube link or a search, filed under its
+artist.
+
+**Just the openings:** the *Adding anime* setting (on the Anime tab, an anime's page, and the
+*Add anime openings* card) picks what an anime import brings in: *Everything*, *Songs only*,
+*OPs & EDs* or *Openings*. It applies to every add button and bulk import. An anime's page has
+a **+** next to each opening/ending to add just that song. **Add link → Add anime openings**
+takes a pasted list of anime (one per line; English or romaji titles), optionally with every
+season, and imports e.g. only their openings. Songs you already have are skipped, so you can
+widen an import later.
 
 ## Where the data comes from
 
 | What | Source | Key needed? |
 |---|---|---|
-| Game catalog (~4,400 games with year, genres, series, composers, Steam id) | [Wikidata](https://www.wikidata.org), baked into `src/data/catalog.json` | No |
-| Collections (Nintendo per console, top games per year, indie hits) | Wikidata + [SteamSpy](https://steamspy.com), in `src/data/collections.json` | No |
-| Covers | Steam's 600×900 library art, Wikipedia infobox images, Roblox game icons | No |
-| Tags: platforms, modes, full genre list, themes, developer, publisher, franchise | Wikidata | No |
-| Keywords ("Atmospheric", "Story Rich", …) | Steam user tags via SteamSpy (cached in `data/cache/`) | No |
-| Store links: Steam, GOG, Epic, Nintendo eShop, PlayStation Store, itch.io, Roblox, Wikipedia | Wikidata, `my-games.json` | No |
-| Your Steam library | Paste of your Steam games page, matched via Wikidata | No (optional Steam Web API key) |
-| Soundtrack playlists, video titles, durations, tracklists | YouTube pages, read by the local server (`server/youtube.ts`) | No |
+| Games: year, genres, series, composers, platforms, developer, Steam id | [Wikidata](https://www.wikidata.org) | No |
+| Game collections (Nintendo per console, top per year, indie hits), keywords | Wikidata + [SteamSpy](https://steamspy.com) | No |
+| Films & series: studio, composers, genres, network, posters | Wikidata + Wikipedia | No |
+| Anime: titles (English/romaji/native), studio, format, tags, OP/ED/insert songs with artists | AniList GraphQL + AnimeThemes API | No |
+| Artists: genres, country, active since, YouTube channel, Spotify; live search | Wikidata, Wikimedia Commons, MusicBrainz | No |
+| Covers | Steam art, Wikipedia infobox images, AniList, Commons, Roblox icons | No |
+| Playlists, video titles, durations, tracklists | YouTube pages, read by the local server (`server/youtube.ts`) | No |
+| Your Steam library | Paste of your Steam games page | No (optional Steam Web API key) |
 | Playback | YouTube IFrame Player API | No |
 
-Rebuild the bundled catalog and collections with `npm run catalog` (about two minutes). The
-sizes (games per year, indie games per year, base catalog threshold) are constants at the top of
-`scripts/catalog-builder.mjs`.
+Rebuild the bundled catalogs with `npm run catalog` (all domains; `--only anime,artists` for a
+subset). Expect ~30–40 minutes for everything, mostly Wikidata/Wikipedia pacing.
 
-## Monthly auto-update
+## Weekly auto-update
 
-Shortly after the app starts, it checks whether 30 days have passed since the last update. If
-they have:
+Shortly after the app starts it checks whether a week has passed since the last update. If so:
 
-1. The local server reruns the same catalog build (`POST /api/refresh` → `scripts/catalog-builder.mjs`)
-   and writes the result to `data/` (outside `src/`, so nothing hot-reloads). The app then
-   prefers `data/*.json` over the bundled copy.
-2. Games that newly appear in a collection you've subscribed to are imported in the
-   background. You subscribe by pressing **Add all**, or with the **auto-add new** checkbox.
-   *My games* is subscribed by default.
+1. **Catalogs:** the local server rebuilds all catalogs (`POST /api/refresh`) into `data/`. New
+   titles, release dates, covers and tags. The app prefers these over the bundled copy.
+2. **New titles** in collections you subscribed to (**Add all**, or **auto-add new**) are
+   imported in the background.
+3. **Retries:** titles that found nothing before (e.g. unreleased at the time) are tried again
+   once released, at most weekly.
+4. **Source sync:** each imported playlist (checked at most weekly) is re-read: new videos
+   become new tracks, removed ones are marked unavailable, renamed ones get the new name (unless
+   you renamed the track yourself).
+5. A **"New since…" banner** shows what arrived, with *Play what's new* and *Browse them*.
 
-If the refresh fails (offline, Wikidata down), it retries the next day. **check now** under the
-collections forces an update. The bookkeeping (last update, subscriptions, games already seen)
-lives in the library database, so it's included in backups.
+Unreleased titles are hidden from Discover by default (**Show unreleased** reveals them,
+marked *Soon*). **check now** under the collections forces an update.
 
-## Importing everything at once
-
-Importing ~1,500 games in the browser works but is slow if the tab is in the background (browsers
-throttle hidden tabs). With the dev server running, this does the same import from the command
-line and writes a library backup:
-
-```bash
-npm run import-all
-```
-
-Then use **Add link → Backup → Restore from file…** and pick `vgm-library.json`. Re-running the
-command resumes where it stopped. Use `--groups mine,nintendo` to limit it to certain collections.
-
-## My games
-
-Your own games go in `config/my-games.json` (gitignored; copy `config/my-games.example.json`), each with fixed YouTube sources (playlist or
-video links) instead of a search. New entries are imported automatically on the next app start
-(each only once, so deleting one from the library sticks). They also form the *My games*
-collection and get the genre you give them (e.g. "Roblox"), so you can filter to them in Listen.
-
-The YouTube reader parses the JSON that YouTube embeds in its own pages. If YouTube changes its
-markup and imports start failing, the parser in `server/youtube.ts` is the place to look.
+Reloading the page during an import is safe: each finished title is saved atomically, and the
+remaining queue is stored and resumes on the next start.
 
 ## Using it
 
-- **Discover** has three views:
-  - *For you*: shelves of cover art, including what's related to what you actually listen to
-    (same franchise, same composer), plus the year, indie and Nintendo lists and a random
-    throwback. A **Series & franchises** shelf shows fanned-out covers per series.
-  - *All games*: a filterable grid. Filter by genre, platform, mode, keyword, franchise,
-    developer or composer (filters combine), plus era and in/not in library.
-  - *Series & franchises*: every series with 3+ games.
-  Hover a cover for **+** (find and add the soundtrack) or **▶** (play a track if it's in your
-  library). Click it for the game page: cover, developer and publisher, composers, all tags and
-  keywords (each clickable to filter), store links, and the soundtrack with per-track play buttons
-  and **Change source**. **Starter pack** imports ~35 acclaimed soundtracks in one go.
-- **Collections** (bottom of Discover → For you): one-click imports, each expandable into smaller lists:
-  - *My games*: your own games from `config/my-games.json` (gitignored; copy `config/my-games.example.json`) (see above).
-  - *Nintendo first-party*: everything published by Nintendo or The Pokémon Company (so partner
-    studios like Game Freak, Retro, Monolith, Intelligent Systems are included), per console from
-    NES to Switch 2. Re-releases on later consoles are left out of those consoles' lists.
-  - *Biggest games by year*: the 40 most widely covered games of each year since 2010.
-  - *Popular indie games by year*: the 15 indie games with the most positive Steam reviews from
-    each year since 2010 (via SteamSpy).
-  Imports run in the background; progress shows under the top bar and survives switching tabs.
-- **Steam library** (under Add link): open
-  `https://steamcommunity.com/my/games/?tab=all&xml=1` while logged into Steam, copy everything,
-  and paste it in (or save the page and pick the file). A plain list of names also works. Games
-  are matched to Wikidata by Steam app id. Tools, demos and soundtrack DLC are skipped, and
-  the most-played games are imported first. Alternatively put `STEAM_API_KEY=…` in `.env.local`
-  and load the library by profile URL.
-- **Add link:** paste any YouTube playlist or video link (several at once is fine). Full-OST
-  videos with a timestamped tracklist in the description are split into separate tracks.
-  Playlists that mix games are grouped per game. You review the result before saving.
-- **Listen:** filter by track type (battle, boss, town, ambient…), genre, series & franchise,
-  platform, keyword, era and game. The player shows the cover and a link to where you can get the
-  game. Chips
-  have three states: click once for "only these", twice for "never these".
-- **Library:** rename tracks, fix tags, like/ban tracks, or remove games.
+- **Discover:** cover-art shelves per domain (*Everything, Games, Anime, Film & TV, Artists*),
+  a filterable *Browse all* grid, and *Series & franchises*. Search covers the catalogs, your
+  library's tracks (with *Play all*), and MusicBrainz artists. **+** adds a title; the title page
+  has **▶ Play soundtrack** (in order), **⤮ Shuffle**, **Remove**, tags, store links, the
+  openings & endings list for anime, and per-track play buttons.
+- **Listen:** collapsible filter sections: Mix (Variety, Familiarity), Music from, Length,
+  Voice, Song type, Track types, Genres, Series, Platforms, Keywords, Era, Titles. Chips have
+  three states: click once for "only these", twice for "never these". Jingles (< 30 s) are
+  excluded by default. Click the playing title or its cover to open its page. **⧉** pops the player out into a small always-on-top window (Chrome and
+  Edge).
+- **Library:** rename tracks, fix tags, like/ban tracks, remove titles.
+- **Add link:** paste YouTube playlists/videos, add a single song, import your Steam library,
+  back up or restore.
 
 Keys: <kbd>Space</kbd> play/pause, <kbd>N</kbd>/<kbd>→</kbd> skip, <kbd>P</kbd>/<kbd>←</kbd> back,
-<kbd>L</kbd> like, <kbd>B</kbd> never play, <kbd>↑</kbd>/<kbd>↓</kbd> volume, <kbd>M</kbd> mute. Headset and
-keyboard media keys (play/pause, next, previous) work too, and the OS media panel shows the
-track, game and cover.
+<kbd>L</kbd> like, <kbd>B</kbd> never play, <kbd>↑</kbd>/<kbd>↓</kbd> volume, <kbd>M</kbd> mute.
+Headset and keyboard media keys work too, and the OS media panel shows the track and cover.
 
-**Picking up where you left off:** the current song, position and tab are kept in the URL
-(`?track=…&t=…`), and the up-next queue and back history in the browser. After a refresh or
-restart the same song is ready at the same spot; press **Resume** (browsers block sound until you
-click). A bookmarked URL reopens that song too. Volume lives in our own slider (synced both ways
-with YouTube's), and is remembered. Click the progress bar to jump.
+The current song, position and tab are kept in the URL, so a reload or bookmark resumes where
+you were (press **Resume**; browsers block sound until you click).
 
 ## The shuffle (`src/lib/picker.ts`)
 
-Picking happens in two stages, so a 200-track soundtrack doesn't drown out a 15-track one:
+1. **Stay or move on.** With low **Variety**, the next track often comes from the same title
+   (a mini album session). With high variety it always moves on, and a title rests for a
+   while before it can return. Titles from the same series or by the same composer as recent
+   picks are down-weighted; titles with liked tracks get a boost.
+2. **Pick a track in that title.** Recently played tracks are excluded. **Familiarity** moves
+   between favouring tracks you haven't heard and favouring liked ones. Skipping a track in its
+   first minute counts as a mild dislike (×0.6 per skip, up to 5); it never bans it.
 
-1. **Pick a game.** A game that just played rests for a while (the **Variety** slider sets for
-   how long, up to 12 tracks). Its weight then recovers gradually. Games from the same series or
-   by the same composer as recent picks are down-weighted. Games with liked tracks get a small
-   boost.
-2. **Pick a track in that game.** Tracks played recently are excluded. The **Familiarity**
-   slider moves between favouring tracks you haven't heard (Discover) and favouring liked tracks
-   (Favourites). Skipping a track in its first minute counts as a mild dislike; each such skip
-   makes it less likely to come back, but never bans it.
+**Play soundtrack / Shuffle** on a title page, or **Play what's new**, queues an explicit
+program first; the normal shuffle resumes when it's done.
 
-Tracks that YouTube refuses to embed, or that were removed, are marked unavailable and skipped
-automatically.
+## My games
 
-## Your data
+Your own games go in `config/my-games.json` (gitignored; copy `config/my-games.example.json`),
+each with fixed YouTube sources. They're imported once on start-up and form the *My games*
+collection.
 
-Your library lives in this browser's IndexedDB. Use **Add link → Backup** to export or restore it.
+## Your data and hosting
+
+Your library (titles, tracks, plays, likes) lives in **this browser's IndexedDB**, per browser
+and per site address. Use **Add link → Backup** to move it. The catalogs ship inside the app
+bundle; weekly-refreshed catalogs and caches are written to the server's `data/` folder.
+
+Hosting on your own domain works with any Node host (`npm start`). GitHub Pages alone can't run
+the `/api` part (YouTube reading, catalog refresh); that would need porting `server/plugin.ts`
+to serverless functions (e.g. Cloudflare Workers). Each visitor would get their own library in
+their own browser.
 
 ## For contributors and AI agents
 

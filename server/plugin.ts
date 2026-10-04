@@ -1,32 +1,36 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv, type Plugin, type Connect } from 'vite';
-import { buildCatalog } from '../scripts/catalog-builder.mjs';
+import { buildAll, DATA_FILES, keepMissingGroups } from '../scripts/build-all.mjs';
 import { enrichGames } from '../scripts/enrich.mjs';
 import type { CatalogGame } from '../src/types.ts';
+import { searchArtists } from './artists.ts';
 import { steamOwnedGames } from './steam.ts';
 import { search, getPlaylist, getVideo } from './youtube.ts';
 
 let steamKey: string | undefined;
-// Runtime data (gitignored): monthly-refreshed catalog, caches.
+// Runtime data (gitignored): weekly-refreshed catalogs, caches.
 let dataDir = 'data';
 // Personal config (gitignored): config/my-games.json. See config/my-games.example.json.
 let configDir = 'config';
 
 const log = (msg: string) => console.log(`[catalog] ${msg}`);
 
-// Monthly refresh: rebuild catalog + collections into data/ (outside src/, so it
-// doesn't trigger a hot reload). The client prefers these files over the bundled ones.
-let refreshing: Promise<{ generatedAt: string; games: number }> | null = null;
+// Weekly refresh: rebuild every catalog into data/ (outside src/, so it doesn't trigger a hot
+// reload). The client prefers these files over the bundled ones when they're newer.
+let refreshing: Promise<{ generatedAt: string; files: string[] }> | null = null;
 
 function refreshCatalog() {
-  refreshing ??= buildCatalog({ log, cacheFile: join(dataDir, 'cache', 'steamspy-tags.json') })
-    .then(async ({ catalog, collections }) => {
+  refreshing ??= buildAll({ log, cacheFile: join(dataDir, 'cache', 'steamspy-tags.json') })
+    .then(async (files: Record<string, unknown>) => {
       mkdirSync(dataDir, { recursive: true });
-      writeFileSync(join(dataDir, 'catalog.json'), JSON.stringify(catalog));
-      writeFileSync(join(dataDir, 'collections.json'), JSON.stringify(collections));
+      // A domain whose build failed is missing here: its previous file stays in place (the
+      // client falls back to the bundled one), and its collection groups are carried over.
+      const prev = [join(dataDir, 'collections.json'), 'src/data/collections.json'].find((f) => existsSync(f));
+      keepMissingGroups(files, prev ? JSON.parse(readFileSync(prev, 'utf8')) : null);
+      for (const [name, contents] of Object.entries(files)) writeFileSync(join(dataDir, `${name}.json`), JSON.stringify(contents));
       await refreshMyGames();
-      return { generatedAt: collections.generatedAt, games: catalog.length };
+      return { generatedAt: (files.collections as { generatedAt: string }).generatedAt, files: Object.keys(files) };
     })
     .finally(() => (refreshing = null));
   return refreshing;
@@ -96,9 +100,13 @@ const handler: Connect.NextHandleFunction = async (req, res, next) => {
       case '/api/steam/owned':
         data = await steamOwnedGames(q('profile'), steamKey);
         break;
-      case '/api/data/catalog':
-      case '/api/data/collections': {
-        const file = join(dataDir, url.pathname.endsWith('catalog') ? 'catalog.json' : 'collections.json');
+      case '/api/artists/search':
+        data = await cached(`a:${q('q').toLowerCase()}`, () => searchArtists(q('q')));
+        break;
+      case '/api/data': {
+        const name = q('name');
+        if (!DATA_FILES.includes(name)) throw new Error('Unknown data file');
+        const file = join(dataDir, `${name}.json`);
         if (!existsSync(file)) {
           res.statusCode = 404;
           data = { error: 'No refreshed data yet' };

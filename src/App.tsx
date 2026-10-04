@@ -4,10 +4,12 @@ import { DiscoverView } from './components/DiscoverView';
 import { FiltersPanel } from './components/FiltersPanel';
 import { LibraryView } from './components/LibraryView';
 import { BulkStatus } from './components/BulkStatus';
+import { Logo } from './components/Logo';
+import { NewArrivals } from './components/NewArrivals';
 import { ListenView } from './components/ListenView';
 import { loadFilters, saveFilters } from './lib/settings';
 import { readUrlState, writeUrlState } from './lib/urlState';
-import { ensureMyGames, monthlyUpdate, syncLibraryMeta } from './lib/updater';
+import { ensureMyGames, resumeInterrupted, runUpdate, syncLibraryMeta } from './lib/updater';
 import type { Filters } from './types';
 import { useSession } from './useSession';
 
@@ -40,8 +42,9 @@ export function App() {
   useEffect(() => {
     const timer = window.setTimeout(async () => {
       await syncLibraryMeta();
+      await resumeInterrupted();
       await ensureMyGames();
-      await monthlyUpdate();
+      await runUpdate();
     }, 4000);
     return () => window.clearTimeout(timer);
   }, []);
@@ -49,7 +52,7 @@ export function App() {
   useEffect(() => {
     const t = session.current;
     const g = session.currentGame;
-    document.title = t && g ? `${t.title} · ${g.title}` : 'VGM Shuffle';
+    document.title = t && g ? `${t.title} · ${g.title}` : 'Medley';
   }, [session.current, session.currentGame]);
 
   const compact = tab !== 'listen';
@@ -58,7 +61,7 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="logo">♫</span> VGM Shuffle
+          <Logo /> <span className="wordmark">medley</span>
         </div>
         <nav>
           {TABS.map((t) => (
@@ -71,6 +74,7 @@ export function App() {
       <BulkStatus />
 
       <main>
+        {(tab === 'listen' || tab === 'discover') && <NewArrivals session={session} onBrowse={() => setTab('discover')} />}
         {tab === 'library' && <LibraryView session={session} />}
         {tab === 'discover' && <DiscoverView session={session} />}
         {tab === 'add' && <AddView />}

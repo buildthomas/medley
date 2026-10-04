@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { db } from '../db';
 import { primaryLink, useCatalog } from '../lib/catalog';
 import { useMediaSession } from '../lib/mediaSession';
+import { pipSupported, usePopOut } from './PopOutPlayer';
 import { TRACK_TYPES } from '../lib/parse';
 import { Cover } from './discover/Cover';
+import { GameDetail } from './discover/GameDetail';
+import { requestDiscover } from '../lib/intents';
 import type { Session } from '../useSession';
 import { loadVolume, saveVolume, writeUrlState } from '../lib/urlState';
 import { YouTubePlayer, type PlayerHandle } from './YouTubePlayer';
@@ -27,6 +30,14 @@ export function ListenView({
   const [notice, setNotice] = useState<string | null>(null);
   const cat = useCatalog();
   const catGame = currentGame ? cat?.byId.get(currentGame.id) : undefined;
+  // Clicking the title (or cover) of what's playing opens its page right here.
+  const [showWork, setShowWork] = useState(false);
+  const work = catGame ?? (currentGame ? { ...currentGame, franchise: currentGame.franchise ?? undefined, pop: 0 } : undefined);
+
+  // Lets the header logo dance along (see .logo-mark in styles.css).
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-playing', playing);
+  }, [playing]);
   const link = primaryLink(catGame);
 
   const [volume, setVolume] = useState(loadVolume);
@@ -63,6 +74,26 @@ export function ListenView({
       pause: () => player.current?.pause(),
       next: skip,
       previous: session.prev,
+    },
+  );
+
+  // Always-on-top mini window (Chrome/Edge).
+  const popOut = usePopOut(
+    {
+      title: current?.title ?? null,
+      work: currentGame?.title ?? null,
+      artist: current?.artist ?? null,
+      cover: catGame?.covers?.[0] ?? null,
+      playing,
+      liked: !!current?.liked,
+      elapsed: progress.t,
+      length: progress.len,
+    },
+    {
+      toggle: () => (current ? player.current?.toggle() : session.next()),
+      next: skip,
+      prev: session.prev,
+      like: () => current && db.tracks.update(current.id, { liked: !current.liked }),
     },
   );
 
@@ -113,7 +144,7 @@ export function ListenView({
     return (
       <Empty>
         <h2>Your library is empty</h2>
-        <p>Pick games from the catalog and VGM Shuffle will find their soundtracks on YouTube.</p>
+        <p>Pick games from the catalog and Medley will find their music on YouTube.</p>
         <div className="row-actions center">
           <button className="primary" onClick={() => goTo('discover')}>
             Browse games
@@ -170,14 +201,22 @@ export function ListenView({
         <div className="now">
           <div className="now-row">
             {currentGame && (
-              <Cover
-                game={{ title: currentGame.title, year: currentGame.year, covers: catGame?.covers }}
-                className="now-cover"
-              />
+              <button className="now-cover-btn" onClick={() => setShowWork(true)} title={`Open ${currentGame.title}`}>
+                <Cover
+                  game={{ title: currentGame.title, year: currentGame.year, covers: catGame?.covers }}
+                  className="now-cover"
+                />
+              </button>
             )}
             <div className="now-text">
             <div className="now-game">
-              {currentGame?.title ?? 'Nothing playing'}
+              {currentGame ? (
+                <button className="now-work" onClick={() => setShowWork(true)} title={`Open ${currentGame.title}`}>
+                  {currentGame.title}
+                </button>
+              ) : (
+                'Nothing playing'
+              )}
               {currentGame?.year && <span className="muted"> · {currentGame.year}</span>}
             </div>
             <div className="now-title">{current?.title ?? 'Press start, or hit N'}</div>
@@ -272,6 +311,15 @@ export function ListenView({
               ⤢
             </button>
           )}
+          {pipSupported() && (
+            <button
+              className={`expand ${popOut.open ? 'liked' : ''}`}
+              onClick={popOut.popOut}
+              title={popOut.open ? 'Close the floating mini player' : 'Pop out a floating, always-on-top mini player'}
+            >
+              ⧉
+            </button>
+          )}
           <button
             className="hide-compact"
             disabled={!currentGame}
@@ -288,9 +336,30 @@ export function ListenView({
       </div>
 
       <div className="side-lists">
+        {session.program && (
+          <div className="list-card program-card">
+            <header>
+              <h3>
+                Playing: {session.program.label}{' '}
+                <span className="muted">· {session.program.tracks.length} left</span>
+              </h3>
+              <button className="link" onClick={session.stopProgram} title="Back to the shuffle after this track">
+                back to shuffle
+              </button>
+            </header>
+            <ol className="tracklist">
+              {session.program.tracks.slice(0, 8).map((t) => (
+                <li key={t.id} onClick={() => session.playNow(t.id)} title="Play now">
+                  <span className="truncate">{t.title}</span>
+                  <span className="muted truncate">{gameMap.get(t.gameId)?.title}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
         <div className="list-card">
           <header>
-            <h3>Up next</h3>
+            <h3>{session.program ? 'Then the shuffle' : 'Up next'}</h3>
             <button className="link" onClick={session.reroll}>
               reshuffle
             </button>
@@ -327,6 +396,19 @@ export function ListenView({
           <kbd>Space</kbd> play/pause · <kbd>N</kbd> skip · <kbd>P</kbd> back · <kbd>L</kbd> like · <kbd>B</kbd> never · <kbd>↑</kbd><kbd>↓</kbd> volume · <kbd>M</kbd> mute
         </p>
       </div>
+      {showWork && work && (
+        <GameDetail
+          game={work}
+          session={session}
+          onClose={() => setShowWork(false)}
+          onFacet={(kind, value) => {
+            // Tags (composer, genre, studio…) browse everything with that tag in Discover.
+            setShowWork(false);
+            requestDiscover(value, [], { kind, value });
+            goTo('discover');
+          }}
+        />
+      )}
     </div>
   );
 }

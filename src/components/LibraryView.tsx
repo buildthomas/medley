@@ -197,7 +197,7 @@ function GameEditor({
                 <input
                   className="inline"
                   defaultValue={t.title}
-                  onBlur={(e) => e.target.value !== t.title && db.tracks.update(t.id, { title: e.target.value })}
+                  onBlur={(e) => e.target.value !== t.title && db.tracks.update(t.id, { title: e.target.value, customTitle: true })}
                 />
                 {t.unavailable && <span className="err small"> unavailable on YouTube</span>}
               </td>

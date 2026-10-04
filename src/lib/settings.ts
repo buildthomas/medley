@@ -5,6 +5,8 @@ const KEY = 'vgm-shuffle:filters';
 export const DEFAULT_FILTERS: Filters = {
   genres: {},
   types: { extended: 'out' },
+  // Fanfares, stingers and sound effects under 30 s aren't really listening material.
+  lengths: { jingle: 'out' },
   decades: {},
   variety: 0.7,
   familiarity: 0.35,

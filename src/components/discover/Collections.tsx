@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { Collections as CollectionsData } from '../../lib/catalog';
-import { getSubscriptions, monthlyUpdate, setSubscribed, UPDATE_INTERVAL, useUpdateStatus } from '../../lib/updater';
+import { getSubscriptions, runUpdate, setSubscribed, UPDATE_INTERVAL, useUpdateStatus } from '../../lib/updater';
 import type { CatalogGame } from '../../types';
 
 export function Collections({
@@ -99,7 +99,7 @@ export function Collections({
           <>
             {nextCheck && <>Next check for new games {new Date(nextCheck).toLocaleDateString()}. </>}
             {update.message && <>{update.message} </>}
-            <button className="link" onClick={() => monthlyUpdate(true)}>
+            <button className="link" onClick={() => runUpdate(true)}>
               check now
             </button>
           </>

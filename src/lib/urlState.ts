@@ -46,6 +46,13 @@ const QUEUE_KEY = 'vgm-shuffle:session';
 export interface SavedSession {
   queue: string[];
   back: string[];
+  /** An explicit play order (e.g. a whole soundtrack) that runs before shuffle resumes. */
+  program?: Program | null;
+}
+
+export interface Program {
+  label: string;
+  ids: string[];
 }
 
 export function loadSavedSession(): SavedSession {
@@ -53,7 +60,11 @@ export function loadSavedSession(): SavedSession {
     const raw = localStorage.getItem(QUEUE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      return { queue: Array.isArray(s.queue) ? s.queue : [], back: Array.isArray(s.back) ? s.back : [] };
+      return {
+        queue: Array.isArray(s.queue) ? s.queue : [],
+        back: Array.isArray(s.back) ? s.back : [],
+        program: s.program && Array.isArray(s.program.ids) ? s.program : null,
+      };
     }
   } catch {
     /* storage unavailable */

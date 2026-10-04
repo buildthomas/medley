@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CatalogGame } from '../types';
 import { apiUrl } from './api';
-import { createCatalogMatcher } from './parse';
+import { createCatalogMatcher, normalize } from './parse';
 
 export interface CollectionList {
   id: string;
@@ -10,6 +10,8 @@ export interface CollectionList {
 }
 export interface CollectionGroup {
   id: string;
+  /** game | screen | anime | artist (absent = game) */
+  domain?: string;
   title: string;
   description: string;
   lists: CollectionList[];
@@ -30,6 +32,8 @@ async function fetchJson<T>(path: string): Promise<T | null> {
 
 interface Loaded {
   games: CatalogGame[];
+  /** Normalised names of all known artists, for telling "Artist - Song" from "Song - Artist". */
+  artistNames: Set<string>;
   byId: Map<string, CatalogGame>;
   matcher: ReturnType<typeof createCatalogMatcher>;
   collections: Collections;
@@ -37,23 +41,35 @@ interface Loaded {
 
 let loading: Promise<Loaded> | null = null;
 
+/** The catalog files, one per domain (see scripts/build-all.mjs). */
+const DOMAIN_FILES = {
+  catalog: () => import('../data/catalog.json'),
+  screen: () => import('../data/screen.json'),
+  anime: () => import('../data/anime.json'),
+  artists: () => import('../data/artists.json'),
+} as const;
+
 /**
- * Catalog + collections. Prefers the monthly-refreshed copy from the local server
- * (data/*.json) when it's newer than the bundled one. Your own games come from the
+ * Catalogs for every domain + collections. Prefers the weekly-refreshed copies from the local
+ * server (data/*.json) when they're newer than the bundled ones. Your own games come from the
  * server too (config/my-games.json, personal and gitignored), so edits apply on reload.
  */
 export function loadCatalog(): Promise<Loaded> {
   loading ??= (async () => {
-    const [bundledGames, bundledCollections, freshGames, freshCollections, myGamesRaw] = await Promise.all([
-      import('../data/catalog.json').then((m) => m.default as CatalogGame[]),
+    const names = Object.keys(DOMAIN_FILES) as (keyof typeof DOMAIN_FILES)[];
+    const [bundledCollections, freshCollections, myGamesRaw, ...domains] = await Promise.all([
       import('../data/collections.json').then((m) => m.default as Collections),
-      fetchJson<CatalogGame[]>('/api/data/catalog'),
-      fetchJson<Collections>('/api/data/collections'),
+      fetchJson<Collections>('/api/data?name=collections'),
       fetchJson<CatalogGame[]>('/api/my-games'),
+      ...names.map(async (n) => ({
+        bundled: (await DOMAIN_FILES[n]()).default as CatalogGame[],
+        fresh: await fetchJson<CatalogGame[]>(`/api/data?name=${n}`),
+      })),
     ]);
     const myGames = myGamesRaw ?? [];
-    const useFresh = !!(freshGames && freshCollections && freshCollections.generatedAt > bundledCollections.generatedAt);
-    const base = useFresh ? freshGames! : bundledGames;
+    const useFresh = !!(freshCollections && freshCollections.generatedAt > bundledCollections.generatedAt);
+    // A domain whose refresh failed has no fresh file; fall back to the bundled one for it.
+    const base = domains.flatMap((d) => (useFresh && d.fresh ? d.fresh : d.bundled));
     const baseCollections = useFresh ? freshCollections! : bundledCollections;
 
     const mine = new Set(myGames.map((g) => g.id));
@@ -74,7 +90,11 @@ export function loadCatalog(): Promise<Loaded> {
         ...baseCollections.groups.filter((g) => g.id !== 'mine'),
       ],
     };
-    return { games, byId: new Map(games.map((g) => [g.id, g])), matcher: createCatalogMatcher(games), collections };
+    // Title matching (guessing which game a video belongs to) only makes sense for games:
+    // films like "Up" or artists like "Queen" would match all sorts of video titles.
+    const matcher = createCatalogMatcher(games.filter((g) => !g.kind || g.kind === 'game'));
+    const artistNames = new Set(games.filter((g) => g.kind === 'artist').map((g) => normalize(g.title)));
+    return { games, byId: new Map(games.map((g) => [g.id, g])), matcher, collections, artistNames };
   })();
   return loading;
 }
@@ -115,6 +135,12 @@ function publish(l: Loaded) {
 export function primaryLink(game: CatalogGame | undefined) {
   if (!game?.links?.length) return null;
   return game.links.find((l) => l.label !== 'Wikipedia') ?? game.links[0];
+}
+
+/** Not out yet: a future release date, or a future year without a date. */
+export function isUpcoming(game: Pick<CatalogGame, 'date' | 'year'>, now = new Date()): boolean {
+  if (game.date) return game.date > now.toISOString().slice(0, 10);
+  return game.year != null && game.year > now.getFullYear();
 }
 
 /** Franchise if known, else series: the grouping used for "Series & franchises". */

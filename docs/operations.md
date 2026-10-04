@@ -11,7 +11,8 @@
 | `npm start` | Production build served by `vite preview` on :5174 (API included) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run build` | Typecheck + production build to `dist/` |
-| `npm run catalog` | Rebuild `src/data/*.json` from Wikidata/SteamSpy (≈2 min, +≈30 min first time for Steam keywords) |
+| `npm run catalog` | Rebuild all `src/data/*.json` (≈30–40 min; +≈30 min the first time for Steam keywords) |
+| `npm run catalog -- --only anime,artists` | Rebuild some domains (`games`, `screen`, `anime`, `artists`); other domains' collections are kept |
 | `npm run import-all` | Headless bulk import of all collections + starter pack → `vgm-library.json` (needs `npm run dev` running) |
 | `npx tsx scripts/import-headless.ts --groups mine,nintendo --out file.json` | Limit to groups; re-run to resume; `--retry-failed` retries games that found nothing |
 | `node scripts/enrich-catalog.mjs --out data/x.json` | Re-run only the enrichment step on the current catalog |
@@ -34,6 +35,17 @@ importer produces the same format.
 Keyless: open `https://steamcommunity.com/my/games/?tab=all&xml=1` while logged in, paste it (or
 save and choose the file) under **Add link → Import your Steam library**. Page text or a list of
 names also work. Matching: Steam app id → catalog / Wikidata P1733 → name.
+
+## Hosting
+
+- **Own domain, any Node host:** `npm start` (or `vite preview` behind a reverse proxy) serves
+  the app and `/api`. `data/` must be writable for the weekly refresh.
+- **GitHub Pages / static hosting:** the client builds fine, but `/api` (YouTube reading,
+  MusicBrainz, catalog refresh) needs a server. Port `server/plugin.ts` routes to serverless
+  functions (Cloudflare Workers / Vercel / Netlify) and point the client at them. Playback of
+  an existing library works without it; importing doesn't.
+- Libraries are per browser **and per origin**: moving from `localhost:5173` to a domain starts
+  empty; use Backup → Restore.
 
 ## Troubleshooting
 

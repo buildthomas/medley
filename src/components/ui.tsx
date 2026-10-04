@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ChipState } from '../types';
 
 export function formatTime(s: number | null | undefined): string {
@@ -54,14 +54,59 @@ export function TriChips({
   );
 }
 
-export function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
+const SECTIONS_KEY = 'vgm-shuffle:open-sections';
+
+function readOpenSections(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(SECTIONS_KEY) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Panel section. With an `id` it's collapsible (collapsed by default, remembered per browser);
+ * `active` shows how many filters inside are set, so a collapsed section still tells you.
+ */
+export function Section({
+  title,
+  children,
+  aside,
+  id,
+  active = 0,
+}: {
+  title: string;
+  children: ReactNode;
+  aside?: ReactNode;
+  id?: string;
+  active?: number;
+}) {
+  const [open, setOpen] = useState(() => (id ? (readOpenSections()[id] ?? false) : true));
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (!id) return;
+    try {
+      localStorage.setItem(SECTIONS_KEY, JSON.stringify({ ...readOpenSections(), [id]: next }));
+    } catch {
+      /* ignore */
+    }
+  }
   return (
-    <section className="panel-section">
+    <section className={`panel-section ${id ? 'collapsible' : ''} ${open ? 'open' : ''}`}>
       <header>
-        <h3>{title}</h3>
-        {aside}
+        {id ? (
+          <button className="section-toggle" onClick={toggle} aria-expanded={open}>
+            <span className="caret">{open ? '▾' : '▸'}</span>
+            <h3>{title}</h3>
+            {active > 0 && <span className="active-count">{active}</span>}
+          </button>
+        ) : (
+          <h3>{title}</h3>
+        )}
+        {open && aside}
       </header>
-      {children}
+      {open && children}
     </section>
   );
 }

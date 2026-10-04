@@ -27,12 +27,15 @@ export interface VideoHit {
   id: string;
   title: string;
   channel: string;
+  channelId?: string;
   duration: number | null;
 }
 export interface PlaylistItem {
   videoId: string;
   title: string;
   duration: number | null;
+  /** The uploader of this item: in album playlists that's "Performer - Topic", which tells songs from score. */
+  channel?: string;
 }
 export interface PlaylistData {
   id: string;
@@ -44,6 +47,7 @@ export interface VideoData {
   id: string;
   title: string;
   channel: string;
+  channelId?: string;
   duration: number | null;
   description: string;
 }
@@ -141,6 +145,13 @@ function lockupChannel(lockup: Json): string {
   return text(rows?.[0]?.metadataParts?.[0]?.text) || '';
 }
 
+function lockupChannelId(lockup: Json): string | undefined {
+  const rows = lockup.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel?.metadataRows;
+  return rows?.[0]?.metadataParts?.[0]?.text?.commandRuns?.[0]?.onTap?.innertubeCommand?.browseEndpoint?.browseId;
+}
+
+const runsChannelId = (t: Json): string | undefined => t?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId;
+
 function lockupTitle(lockup: Json): string {
   return text(lockup.metadata?.lockupMetadataViewModel?.title);
 }
@@ -152,11 +163,16 @@ function collectVideos(data: Json, into: Map<string, PlaylistItem>) {
     if (k === 'playlistVideoRenderer' && v?.videoId) {
       const title = text(v.title);
       if (!UNAVAILABLE.test(title))
-        into.set(v.videoId, { videoId: v.videoId, title, duration: v.lengthSeconds ? Number(v.lengthSeconds) : null });
+        into.set(v.videoId, {
+          videoId: v.videoId,
+          title,
+          duration: v.lengthSeconds ? Number(v.lengthSeconds) : null,
+          channel: text(v.shortBylineText) || undefined,
+        });
     } else if (k === 'lockupViewModel' && v?.contentType === 'LOCKUP_CONTENT_TYPE_VIDEO' && v.contentId) {
       const title = lockupTitle(v);
       const dur = lockupBadges(v).map(parseDuration).find((d) => d != null) ?? null;
-      if (!UNAVAILABLE.test(title)) into.set(v.contentId, { videoId: v.contentId, title, duration: dur });
+      if (!UNAVAILABLE.test(title)) into.set(v.contentId, { videoId: v.contentId, title, duration: dur, channel: lockupChannel(v) || undefined });
     }
   });
 }
@@ -222,6 +238,7 @@ export async function getVideo(id: string): Promise<VideoData> {
     id,
     title: d.title ?? '',
     channel: d.author ?? '',
+    channelId: d.channelId,
     duration: d.lengthSeconds ? Number(d.lengthSeconds) : null,
     description: d.shortDescription ?? '',
   };
@@ -269,6 +286,7 @@ export async function search(query: string, type: 'playlist' | 'video'): Promise
           id: v.videoId,
           title: text(v.title),
           channel: text(v.ownerText) || text(v.longBylineText),
+          channelId: runsChannelId(v.ownerText) ?? runsChannelId(v.longBylineText),
           duration: parseDuration(text(v.lengthText)),
         });
       } else if (k === 'lockupViewModel' && v?.contentType === 'LOCKUP_CONTENT_TYPE_VIDEO' && !seen.has(v.contentId)) {
@@ -278,6 +296,7 @@ export async function search(query: string, type: 'playlist' | 'video'): Promise
           id: v.contentId,
           title: lockupTitle(v),
           channel: lockupChannel(v),
+          channelId: lockupChannelId(v),
           duration: lockupBadges(v).map(parseDuration).find((d) => d != null) ?? null,
         });
       }

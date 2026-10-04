@@ -1,51 +1,77 @@
 # Data model
 
-**Summary:** two kinds of data. The **catalog** (`CatalogGame`, public metadata about ~4,400 games)
-is static JSON. The **library** (`Game`, `Track`, `Source`, `Play`, `meta`) is the user's personal
-data in IndexedDB. Types live in `src/types.ts`; the schema in `src/db.ts`.
+**Summary:** two kinds of data. The **catalogs** (`CatalogGame[]`: public metadata about games,
+films, series, anime and artists) are static JSON. The **library** (`Game`, `Track`, `Source`,
+`Play`, `meta`) is the user's personal data in IndexedDB. Types live in `src/types.ts`; the
+schema in `src/db.ts`. Historical naming: `Game`/`CatalogGame`/`gameId` mean any *work*; its
+`kind` says which domain it belongs to.
+
+## Kinds (`WorkKind`, src/lib/kinds.ts)
+
+| `kind` | id format | Catalog file | Importer |
+|---|---|---|---|
+| `game` (default when absent) | Wikidata QID, or `u:<slug>` for personal games | `catalog.json` | `importer.autoAddGame` |
+| `film`, `series` | Wikidata QID | `screen.json` | `autoAddGame` + `complementaryAlbum` (songs) |
+| `anime` | `al:<AniList id>` | `anime.json` | `importers/anime.ts` |
+| `artist` | Wikidata QID, or `mb:<MusicBrainz id>` from live search, or `u:artist-<slug>` when created by *Add a song* | `artists.json` | `importers/artist.ts` |
+
+`KINDS` holds icons/labels; `creditLine(work)` gives the per-kind subtitle (composer / studio /
+artist country & years).
 
 ## Catalog: `CatalogGame` (src/types.ts)
 
 | Field | Notes |
 |---|---|
-| `id` | Wikidata QID (`Q29300592`), or `u:<slug>` for personal games |
-| `title`, `year` | English (or language-neutral `mul`) label; first release year |
-| `genres` | Broad buckets (RPG, Platformer, …) derived from Wikidata genres |
-| `series`, `franchise` | Wikidata P179 / P8345. UI groups by `franchise ?? series` (`franchiseOf()`) |
-| `composers` | Wikidata P86, max 4 |
-| `pop` | Wikipedia language editions: rough popularity, used for sorting |
-| `steam` | Steam app id (Wikidata P1733) |
-| `tags` | `{ platform, genre (full list), mode, theme, developer, publisher }` |
-| `keywords` | Steam user tags (SteamSpy), top 15 |
+| `id`, `kind` | See above |
+| `title`, `year`, `date` | English (or `mul`) label; first release year; `date` as `YYYY-MM-DD` or `YYYY-MM` when Wikidata/AniList knows it to that precision (drives `isUpcoming`) |
+| `altTitles` | Anime: romaji/native/synonyms. Used when ranking YouTube results |
+| `genres` | Broad buckets per domain (RPG… / Animation, Musical… / Pop, K-pop…) |
+| `series`, `franchise` | Grouping. UI groups by `franchise ?? series` (`franchiseOf()`) |
+| `composers` | Games/film: Wikidata P86, max 4 |
+| `pop` | Popularity used for sorting (sitelinks; AniList popularity scaled for anime) |
+| `steam` | Steam app id (games) |
+| `tags` | `{ platform, genre, mode, theme, developer, publisher, studio, network, format, country }`; each optional |
+| `keywords` | Steam tags (games), AniList tags rank ≥ 70 (anime) |
 | `covers` | Portrait image URLs, best first; the UI falls back down the list |
-| `links` | `{ label, url }[]`: stores first, Wikipedia last (`primaryLink()`) |
-| `sources` | Personal games only: fixed YouTube links that bypass search |
-| `roblox` | Personal games only: `{ universeId, placeId }` for icon + link |
+| `links` | `{ label, url }[]`: stores / AniList / MAL / Spotify first, Wikipedia last (`primaryLink()`) |
+| `themes` | Anime only: `{ type: 'OP'|'ED'|'IN', seq, song, artists[], episodes? }[]` from AnimeThemes |
+| `artist` | Artists only: `{ country, since, type: 'person'|'group' }` |
+| `ytChannel` | Artists only: official YouTube channel id (recognises official uploads) |
+| `sources`, `roblox` | Personal games only: fixed YouTube links; Roblox ids for icon + link |
 
 Where it comes from: [data-pipeline.md](data-pipeline.md).
 
 ## Library (IndexedDB `vgm-shuffle`, Dexie)
 
+The database keeps its old name so existing libraries survive the rename to Medley.
+
 | Table | Key | Purpose |
 |---|---|---|
-| `games` | `id` (= catalog id) | A game in the library. `enabled` = in rotation. Copies `franchise`, `platforms`, `keywords` from the catalog for filtering (synced at start-up by `syncLibraryMeta`) |
-| `tracks` | `id` = `videoId`, or `videoId@start` for a slice of a long video | `start`/`end` seconds for slices, `types` (battle, town, …), `liked`, `banned`, `unavailable`, `playCount`, `skipCount` |
-| `sources` | playlist/video id | Where tracks came from; `gameIds` it fed |
+| `games` | `id` (= catalog id) | A work in the library. `enabled` = in rotation. `kind`, `franchise`, `platforms`, `keywords` copied from the catalog for filtering (synced at start-up by `syncLibraryMeta`) |
+| `tracks` | `id` = `videoId`, or `videoId@start` for a slice | `start`/`end` for slices, `duration`, `types`, `liked`, `banned`, `unavailable`, `playCount`, `skipCount`, plus: `vocal` (sung?), `role` (`op`/`ed`/`insert`/`score`/`song`), `seq` (OP2 → 2), `artist`, `customTitle` (user renamed; source sync won't overwrite) |
+| `sources` | playlist/video id | Where tracks came from; `gameIds` it fed; `kind` `playlist`/`video`/`search` (individually found videos, e.g. anime themes); `syncedAt` |
 | `plays` | auto-increment | Play history (`skipped` = skipped early). Picker reads the last 400 |
 | `meta` | `key` | Durable app state (below) |
 
-Schema versions: v1 (games/tracks/sources/plays), v2 adds `meta`. Add a new `db.version(n)` for
+Schema versions: v1 (games/tracks/sources/plays), v2 adds `meta`. New track/game fields are
+optional and unindexed, so they needed no schema bump. Add a new `db.version(n)` for index
 changes; never edit old versions.
 
-### `meta` keys (src/lib/updater.ts, scripts/import-headless.ts)
+Derived, not stored: length bucket (`lengthOf`: jingle < 30 s, short < 90 s, standard, long > 6 min),
+voice (`isVocal`: `vocal` ?? role ≠ score ?? `types` has `vocal`).
 
-| Key | Value |
-|---|---|
-| `lastRefreshAt` / `lastRefreshAttemptAt` | ms timestamps for the monthly refresh |
-| `subscriptions` | collection group ids that auto-add new games (`mine` by default) |
-| `seenCollectionIds` | catalog ids already offered, so only *new* entries are auto-added |
-| `myGamesImported` | personal game ids imported once (deleting one sticks) |
-| `headlessFailed` | titles the headless importer couldn't find (skipped unless `--retry-failed`) |
+### `meta` keys
+
+| Key | Value | Owner |
+|---|---|---|
+| `lastRefreshAt` / `lastRefreshAttemptAt` | ms timestamps for the weekly update | updater.ts |
+| `subscriptions` | collection group ids that auto-add new titles (`mine` by default) | updater.ts |
+| `seenCollectionIds` | catalog ids already offered, so only *new* entries are auto-added | updater.ts |
+| `myGamesImported` | personal game ids imported once (deleting one sticks) | updater.ts |
+| `bulkQueue` | `{ label, ids }` of a running bulk import, so a reload resumes it | bulk.ts |
+| `importFailures` | `{ [id]: { at, reason } }` titles that found nothing; retried weekly once released | bulk.ts |
+| `arrivals` | `{ at, label, ids, newTrackIds?, trackGameIds? }` for the New-arrivals banner; `null` when dismissed | bulk.ts, updater.ts |
+| `headlessFailed` | titles the headless importer couldn't find | import-headless.ts |
 
 Backups (`exportLibrary`) include all five tables, so bookkeeping travels with them.
 
@@ -55,7 +81,11 @@ Backups (`exportLibrary`) include all five tables, so bookkeeping travels with t
 |---|---|---|
 | URL | `?tab=&track=&t=` | Current tab, track id, position (s). Written by `urlState.writeUrlState` |
 | localStorage | `vgm-shuffle:filters` | Listen filters + sliders |
-| localStorage | `vgm-shuffle:session` | Up-next queue and back stack |
+| localStorage | `vgm-shuffle:session` | Up-next queue, back stack, current program |
 | localStorage | `vgm-shuffle:volume` | `{ volume, muted }` |
+| localStorage | `vgm-shuffle:open-sections` | Which filter sections are expanded |
+| localStorage | `vgm-shuffle:discover-domain` | Last Discover domain tab |
+| localStorage | `vgm-shuffle:anime-scope` | What adding an anime imports: `all` / `songs` / `oped` / `op` |
+| localStorage | `vgm-shuffle:cover-backdrops` | Cover URL → `light`/`dark`/`none` (transparent-logo analysis cache) |
 
 All localStorage access is wrapped in try/catch; the app must work when it's unavailable.

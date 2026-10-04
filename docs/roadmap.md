@@ -12,4 +12,10 @@
   tag untagged titles in batches.
 - **Duplicate soundtracks** across a game and its remaster aren't merged.
 - **Mobile background playback** isn't possible with the YouTube iframe (screen lock pauses it).
-- **Static hosting** would need the `/api` functions as serverless functions.
+- **Static hosting** would need the `/api` functions as serverless functions (see operations.md).
+- **Mood/energy tags** (calm, intense, upbeat): skipped for now. Could come from track types +
+  title keywords, or an optional LLM pass.
+- **More domains** (e.g. classical, musicals as their own domain): add a builder in `scripts/`,
+  a `kind` in `src/lib/kinds.ts`, and an importer in `src/lib/importers/`.
+- **Renaming the storage keys** (`vgm-shuffle` → `medley`) would need a one-time Dexie copy;
+  not worth it for now.

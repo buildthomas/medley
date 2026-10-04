@@ -9,23 +9,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { wikiCovers } from './wiki-covers.mjs';
+import { sparql as wdSparql } from './wd.mjs';
 
-const ENDPOINT = 'https://query.wikidata.org/sparql';
-const UA = 'vgm-shuffle/0.3 (personal hobby project; catalog build)';
+const UA = 'medley/0.4 (personal hobby project; catalog build)';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function sparql(query) {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/sparql-results+json', 'User-Agent': UA },
-      body: new URLSearchParams({ query }),
-    });
-    if (res.ok) return (await res.json()).results.bindings;
-    await sleep(3000 * (attempt + 1));
-  }
-  throw new Error('SPARQL failed repeatedly');
-}
+// Retries network errors and responses cut off mid-stream (see gotchas).
+const sparql = (query) => wdSparql(query, { log: console.warn });
 
 const TAG_PROPS = {
   P400: 'platform',

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import { loadSavedSession, readUrlState, saveSession, writeUrlState } from './lib/urlState';
+import { loadSavedSession, readUrlState, saveSession, writeUrlState, type Program } from './lib/urlState';
 import { gamePasses, pickNext, trackPasses, type HistoryEntry } from './lib/picker';
 import type { Filters, Game, Track } from './types';
 
@@ -22,12 +22,13 @@ export function useSession(filters: Filters) {
   const [currentId, setCurrentId] = useState<string | null>(initial.url.track ?? null);
   const [queueIds, setQueueIds] = useState<string[]>(initial.saved.queue);
   const [backStack, setBackStack] = useState<string[]>(initial.saved.back);
+  const [program, setProgram] = useState<Program | null>(initial.saved.program ?? null);
   /** Set after a refresh: the restored track waits (paused, at this position) until you press play. */
   const [resumeAt, setResumeAt] = useState<number | null>(initial.url.track ? (initial.url.t ?? 0) : null);
 
   useEffect(() => {
-    saveSession({ queue: queueIds, back: backStack.slice(-50) });
-  }, [queueIds, backStack]);
+    saveSession({ queue: queueIds, back: backStack.slice(-50), program });
+  }, [queueIds, backStack, program]);
   useEffect(() => {
     writeUrlState({ track: currentId ?? undefined, ...(resumeAt == null ? { t: undefined } : {}) });
   }, [currentId]);
@@ -108,7 +109,18 @@ export function useSession(filters: Filters) {
       // An early skip counts as a mild dislike (recorded together with the next play).
       const early =
         current && opts.skipped && (opts.elapsed ?? 0) < Math.min(60, (current.duration ?? 180) * 0.5) ? current : null;
-      let nextId = queueIds.find(isPlayable);
+      // A program (whole soundtrack) plays in its own order and ignores the rotation filters,
+      // except for tracks you banned or that can't play.
+      let nextId: string | undefined;
+      if (program) {
+        const rest = program.ids.filter((id) => {
+          const t = trackMap.get(id);
+          return t && !t.banned && !t.unavailable;
+        });
+        nextId = rest[0];
+        setProgram(rest.length > 1 ? { ...program, ids: rest.slice(1) } : null);
+      }
+      nextId ??= queueIds.find(isPlayable);
       if (!nextId) {
         const t = pickNext(games, tracks, history(currentId ? [currentId] : []), filters);
         nextId = t?.id;
@@ -118,17 +130,20 @@ export function useSession(filters: Filters) {
       setQueueIds((q) => q.filter((id) => id !== nextId));
       await startTrack(nextId, early);
     },
-    [current, currentId, queueIds, isPlayable, games, tracks, filters, history, startTrack],
+    [current, currentId, queueIds, isPlayable, games, tracks, filters, history, startTrack, program, trackMap],
   );
 
   const prev = useCallback(() => {
     const id = backStack[backStack.length - 1];
     if (!id) return;
     setBackStack((b) => b.slice(0, -1));
-    if (currentId) setQueueIds((q) => [currentId, ...q]);
+    if (currentId) {
+      if (program) setProgram({ ...program, ids: [currentId, ...program.ids] });
+      else setQueueIds((q) => [currentId, ...q]);
+    }
     setResumeAt(null);
     setCurrentId(id);
-  }, [backStack, currentId]);
+  }, [backStack, currentId, program]);
 
   const playNow = useCallback(
     async (id: string) => {
@@ -140,6 +155,26 @@ export function useSession(filters: Filters) {
   );
 
   const reroll = useCallback(() => setQueueIds([]), []);
+
+  /** Play these tracks in this order (or shuffled) now, then return to the shuffle. */
+  const playProgram = useCallback(
+    async (label: string, ids: string[], opts: { shuffle?: boolean } = {}) => {
+      const order = ids.slice();
+      if (opts.shuffle) {
+        for (let i = order.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [order[i], order[j]] = [order[j], order[i]];
+        }
+      }
+      const [first, ...rest] = order;
+      if (!first) return;
+      setProgram(rest.length ? { label, ids: rest } : null);
+      if (currentId) setBackStack((b) => [...b.slice(-49), currentId]);
+      await startTrack(first);
+    },
+    [currentId, startTrack],
+  );
+  const stopProgram = useCallback(() => setProgram(null), []);
   const clearResume = useCallback(() => setResumeAt(null), []);
 
   return {
@@ -150,6 +185,12 @@ export function useSession(filters: Filters) {
     current,
     currentGame: current ? (gameMap.get(current.gameId) ?? null) : null,
     queue: queueIds.map((id) => trackMap.get(id)).filter((t): t is Track => !!t),
+    program: program && {
+      label: program.label,
+      tracks: program.ids.map((id) => trackMap.get(id)).filter((t): t is Track => !!t),
+    },
+    playProgram,
+    stopProgram,
     recentPlays,
     canGoBack: backStack.length > 0,
     resumeAt,

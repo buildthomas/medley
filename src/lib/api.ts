@@ -12,18 +12,20 @@ export interface VideoHit {
   id: string;
   title: string;
   channel: string;
+  channelId?: string;
   duration: number | null;
 }
 export interface PlaylistData {
   id: string;
   title: string;
   channel: string;
-  items: { videoId: string; title: string; duration: number | null }[];
+  items: { videoId: string; title: string; duration: number | null; channel?: string }[];
 }
 export interface VideoData {
   id: string;
   title: string;
   channel: string;
+  channelId?: string;
   duration: number | null;
   description: string;
 }

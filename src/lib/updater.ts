@@ -1,27 +1,35 @@
-// Monthly auto-update, run shortly after app start-up:
-//   1. If 30+ days have passed since the last refresh, ask the local server to rebuild
-//      the catalog + collections from Wikidata/SteamSpy (same method as `npm run catalog`).
-//   2. Games that newly appear in a collection you've subscribed to (by pressing
-//      "Add all", or "My games" by default) are imported in the background.
+// Weekly update, run shortly after app start-up (and on demand via "check now").
+//
+//   1. Catalog: the local server rebuilds catalog + collections from Wikidata/SteamSpy/AniList
+//      (same method as `npm run catalog`). New titles, release dates, covers, tags.
+//   2. New titles: anything newly in a collection you subscribed to ("Add all", or the
+//      "auto-add new" checkbox; "My games" by default) is imported in the background.
+//   3. Retries: titles that found no soundtrack before (e.g. unreleased then) are tried again
+//      once they're out, at most weekly.
+//   4. Source sync: every imported playlist is re-checked for added / removed / renamed videos.
+//   5. What changed is shown in the "new arrivals" banner.
+//
 // Bookkeeping lives in the library database (meta table), so it travels with backups.
 
 import { useSyncExternalStore } from 'react';
 import { db, getMeta, setMeta } from '../db';
 import type { CatalogGame } from '../types';
-import { runBulk } from './bulk';
+import { resumeBulk, runBulk, type Arrivals } from './bulk';
 import { gameMetaFrom } from './importer';
-import { loadCatalog, reloadCatalog, type Collections } from './catalog';
+import { isUpcoming, loadCatalog, reloadCatalog, type Collections } from './catalog';
+import { syncSources } from './sync';
 
 const DAY = 24 * 60 * 60 * 1000;
-export const UPDATE_INTERVAL = 30 * DAY;
+export const UPDATE_INTERVAL = 7 * DAY;
 const RETRY_AFTER = DAY; // when the refresh itself failed (offline, Wikidata down…)
+const RETRY_FAILED_AFTER = 7 * DAY;
 
 const allIds = (c: Collections) => c.groups.flatMap((g) => g.lists.flatMap((l) => l.ids));
 
 // --- status for the UI ---------------------------------------------------------
 export interface UpdateStatus {
   lastRefreshAt: number | null;
-  state: 'idle' | 'refreshing' | 'error';
+  state: 'idle' | 'refreshing' | 'syncing' | 'error';
   message?: string;
 }
 let status: UpdateStatus = { lastRefreshAt: null, state: 'idle' };
@@ -56,7 +64,7 @@ export async function setSubscribed(groupId: string, on: boolean, currentIds: st
   await setMeta('seenCollectionIds', [...seen]);
 }
 
-/** Copy franchise/platforms/keywords from the catalog onto library games (for the shuffle filters). */
+/** Copy franchise/platforms/keywords/kind from the catalog onto library games (for the shuffle filters). */
 export async function syncLibraryMeta() {
   const { byId } = await loadCatalog();
   const games = await db.games.toArray();
@@ -65,7 +73,7 @@ export async function syncLibraryMeta() {
     const cat = byId.get(g.id);
     if (!cat) continue;
     const meta = gameMetaFrom(cat);
-    if (JSON.stringify([g.franchise, g.platforms, g.keywords]) !== JSON.stringify([meta.franchise, meta.platforms, meta.keywords]))
+    if (JSON.stringify([g.franchise, g.platforms, g.keywords, g.kind]) !== JSON.stringify([meta.franchise, meta.platforms, meta.keywords, meta.kind]))
       changes.push({ key: g.id, changes: meta });
   }
   if (changes.length) await db.games.bulkUpdate(changes);
@@ -79,13 +87,31 @@ export async function ensureMyGames() {
   const todo = mine.filter((id) => !done.has(id)).map((id) => byId.get(id)).filter((g): g is CatalogGame => !!g);
   if (!todo.length) return;
   await setMeta('myGamesImported', [...done, ...todo.map((g) => g.id)]);
-  runBulk('My games', todo);
+  runBulk('My games', todo, { announce: true });
+}
+
+/** Start-up: resume an interrupted bulk import. */
+export async function resumeInterrupted() {
+  const { byId } = await loadCatalog();
+  await resumeBulk(byId);
+}
+
+async function announceTracks(newTrackIds: string[], gamesWithNew: string[]) {
+  if (!newTrackIds.length) return;
+  const prev = await getMeta<Arrivals | null>('arrivals', null);
+  await setMeta('arrivals', {
+    at: Date.now(),
+    label: prev?.label ?? 'Weekly update',
+    ids: prev?.ids ?? [],
+    newTrackIds: [...(prev?.newTrackIds ?? []), ...newTrackIds].slice(-1000),
+    trackGameIds: [...new Set([...(prev?.trackGameIds ?? []), ...gamesWithNew])],
+  } satisfies Arrivals);
 }
 
 // --- the update ----------------------------------------------------------------
 let running = false;
 
-export async function monthlyUpdate(force = false) {
+export async function runUpdate(force = false) {
   if (running) return;
   running = true;
   try {
@@ -105,36 +131,59 @@ export async function monthlyUpdate(force = false) {
     if (!force && (now - last < UPDATE_INTERVAL || now - lastAttempt < RETRY_AFTER)) return;
 
     await setMeta('lastRefreshAttemptAt', now);
-    setStatus({ state: 'refreshing', message: 'Looking for new games on Wikidata and Steam…' });
+
+    // 1. Catalog.
+    setStatus({ state: 'refreshing', message: 'Looking for new titles on Wikidata, Steam and AniList…' });
     const res = await fetch('/api/refresh', { method: 'POST' }).catch(() => null);
     if (!res?.ok) {
       const err = res ? ((await res.json().catch(() => ({}))).error ?? res.status) : 'server unreachable';
-      setStatus({ state: 'error', message: `Monthly update failed (${err}); will retry tomorrow.` });
+      setStatus({ state: 'error', message: `Update failed (${err}); will retry tomorrow.` });
       return;
     }
-
     const { collections, byId } = await reloadCatalog();
     await syncLibraryMeta();
+
+    // 2. New titles in subscribed collections. 3. Released titles that found nothing before.
     const seen = new Set(await getMeta<string[]>('seenCollectionIds', []));
     const subs = new Set(await getSubscriptions());
     const library = new Set(await db.games.toCollection().primaryKeys());
-    const fresh = [
-      ...new Set(
-        collections.groups.filter((g) => subs.has(g.id)).flatMap((g) => g.lists.flatMap((l) => l.ids)),
-      ),
-    ]
+    const candidates = [...new Set(collections.groups.filter((g) => subs.has(g.id)).flatMap((g) => g.lists.flatMap((l) => l.ids)))]
       .filter((id) => !seen.has(id) && !library.has(id))
       .map((id) => byId.get(id))
       .filter((g): g is CatalogGame => !!g);
+    // Unreleased titles wait (left "unseen") until they're out; until then YouTube only has trailers.
+    const fresh = candidates.filter((g) => !isUpcoming(g));
+    const waiting = new Set(candidates.filter((g) => isUpcoming(g)).map((g) => g.id));
+    const failures = await getMeta<Record<string, { at: number }>>('importFailures', {});
+    const retries = Object.entries(failures)
+      .filter(([id, f]) => !library.has(id) && now - f.at > RETRY_FAILED_AFTER)
+      .map(([id]) => byId.get(id))
+      .filter((g): g is CatalogGame => !!g && !isUpcoming(g));
 
     await setMeta('lastRefreshAt', now);
-    await setMeta('seenCollectionIds', [...new Set([...seen, ...allIds(collections)])]);
+    await setMeta('seenCollectionIds', [...new Set([...seen, ...allIds(collections).filter((id) => !waiting.has(id))])]);
+    const toImport = [...fresh, ...retries.filter((r) => !fresh.includes(r))];
+    if (toImport.length) runBulk('Weekly update', toImport, { announce: true });
+
+    // 4. Source sync (background; can take a while for big libraries).
+    setStatus({ lastRefreshAt: now, state: 'syncing', message: 'Checking your playlists for new and changed tracks…' });
+    const sync = await syncSources((done, total) =>
+      setStatus({ message: `Checking your playlists for new and changed tracks… ${done}/${total}` }),
+    );
+    await announceTracks(sync.newTrackIds, sync.gamesWithNew);
+
     setStatus({
-      lastRefreshAt: now,
       state: 'idle',
-      message: fresh.length ? `Found ${fresh.length} new games; importing them.` : 'Up to date: no new games in your collections.',
+      message:
+        [
+          toImport.length ? `${toImport.length} new titles importing` : 'no new titles',
+          sync.added ? `${sync.added} new tracks` : null,
+          sync.removed ? `${sync.removed} tracks removed upstream` : null,
+          sync.renamed ? `${sync.renamed} renamed` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') + '.',
     });
-    if (fresh.length) runBulk('Monthly update', fresh);
   } finally {
     running = false;
   }

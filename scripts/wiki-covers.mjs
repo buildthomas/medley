@@ -2,7 +2,7 @@
 // Wikipedia rate-limits bursts, so requests are paced and retried with backoff;
 // a silently skipped batch once cost us ~90% of covers.
 
-const UA = 'vgm-shuffle/0.3 (personal hobby project; catalog build)';
+const UA = 'medley/0.4 (personal hobby project; catalog build)';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchBatch(titles, log) {

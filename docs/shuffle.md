@@ -1,46 +1,68 @@
 # Shuffle, filters and the playback session
 
-**Summary:** `pickNext` (src/lib/picker.ts) chooses a **game** first, then a **track** within it,
-so big soundtracks don't dominate. Filters decide what's eligible. `useSession` keeps a 4-track
-queue, records plays/skips, and persists itself to the URL and localStorage so a refresh resumes.
+**Summary:** `pickNext` (src/lib/picker.ts) chooses a **work** (game, film, anime, artist) first,
+then a **track** within it, so big soundtracks don't dominate. Filters decide what's eligible.
+`useSession` keeps a 4-track queue (or plays an explicit *program* first), records plays/skips,
+and persists itself to the URL and localStorage so a reload resumes.
 
 ## The picker (pure, src/lib/picker.ts)
 
-1. **Eligible:** game `enabled` and passes chip filters (genre, decade, franchise, platform,
-   keyword); track not `banned`/`unavailable` and passes track-type chips.
-2. **Game weight:**
-   - cooldown = `round(variety × min(12, games − 1))` plays; a game that played within it has weight 0, then recovers linearly;
-   - ×0.35 if the same series played recently;
-   - ×0.5 if it shares a composer with either of the last 2 games;
-   - +25% per liked track (up to 4), scaled by familiarity;
-   - mild size factor, so a 6-track game isn't drowned out by a 200-track one.
-3. **Track weight:**
-   - recently played tracks are excluded (last `min(300, 70% of eligible)` plays);
+1. **Eligible:** work `enabled` and passes its chips (kind, genre, decade, franchise, platform,
+   keyword); track not `banned`/`unavailable` and passes its chips (track type, length bucket,
+   voice, role).
+2. **Variety → `varietyParams(v, works)`:**
+   - `stay = 0.75·(1−v)^1.5`: chance the next track comes from the same work (v=0 → ~4 tracks
+     per visit on average; v=0.5 → ~27%; v=1 → never);
+   - `cooldown = round(v^1.5 · min(60, (works−1)/2))` plays a work rests before returning.
+   Simulated with ~1,450 works: v=1 gives a minimum return gap of ~60 plays.
+   The old design (cooldown only, capped at 12 out of ~1,450 works) had no audible effect; see git history.
+3. **Stay:** if `rand() < stay` and the last work still has fresh tracks, use it.
+4. **Otherwise weight every other work** (the last one gets 0):
+   - 0 inside the cooldown, then recovers linearly from 0.25 to 1;
+   - ×0.35 if the same series played recently; ×0.5 if it shares a composer with the last 2;
+   - +25% per liked track (up to 4), scaled by Familiarity;
+   - mild size factor `0.6 + 0.4·min(1, log2(1+n)/5)`.
+   If everything is cooling down (tiny library), fall back to the least recent work.
+5. **Track weight** within the work:
+   - tracks played within the last `min(300, 70% of eligible)` plays are excluded;
    - `liked` ×(1 + 4·familiarity);
    - `1/(1+playCount)^(1.2·(1−familiarity))` favours unheard tracks;
-   - ×0.6 per early skip (max 5 skips counted).
-4. If everything is cooling down (tiny library), fall back to the least recent.
+   - ×0.6 per early skip (max 5 counted).
 
 `history` passed in = last 400 plays + queued tracks, so the queue itself respects cooldowns.
+
+**Skips:** skipping before `min(60 s, 50% of the track)` marks that play `skipped` and bumps
+`skipCount` (→ ×0.6 per skip next time). It does not ban or change the work's weight. A later
+skip is just a normal play. Both are written in one transaction with the next play.
+
+## Derived facets
+
+| Facet | Values | Rule |
+|---|---|---|
+| Length (`lengthOf`) | `jingle` < 30 s, `short` < 1:30, `standard`, `long` > 6 min | Default filter: `lengths: { jingle: 'out' }` (fanfares, stingers) |
+| Voice (`voiceOf`) | `vocal`, `instrumental` | `track.vocal` ?? role ≠ `score` ?? `types` has `vocal` |
+| Role | `op`, `ed`, `insert`, `score`, `song` | `track.role` ?? (`vocal` type → song, else score) |
+| Kind | `game`, `film`, `series`, `anime`, `artist` | From the work |
 
 ## Filters (`Filters` in src/types.ts)
 
 Chips are tri-state: absent / `in` (only these) / `out` (never these). Within a group, any `in`
-must match; any `out` excludes. Default: `types: { extended: 'out' }`. Persisted to localStorage.
-Library games carry `franchise`/`platforms`/`keywords` copied from the catalog
-(`gameMetaFrom`, `syncLibraryMeta`) so filtering doesn't need the catalog loaded.
+must match; any `out` excludes. Defaults: `types: { extended: 'out' }`, `lengths: { jingle: 'out' }`.
+Persisted to localStorage. Sections in `FiltersPanel` are collapsible (collapsed by default;
+open state in `vgm-shuffle:open-sections`) and show how many chips are active. **Reset** clears
+chips but keeps the sliders.
 
 ## Session (src/useSession.ts)
 
-- Live queries: all games, all tracks, last 400 plays.
+- Live queries: all works, all tracks, last 400 plays.
 - Queue effect: drops queued tracks that no longer pass filters, tops up to 4.
-- `next({ skipped, elapsed })`: an early skip (< min(60 s, 50 %)) marks the play `skipped` and
-  bumps `skipCount`.
-- `playNow(id)`, `prev()` (back stack of 50), `reroll()`.
-- **Resume:** on load, `?track=&t=` from the URL become `currentId` + `resumeAt`; the player
-  *cues* (doesn't autoplay) at that offset and shows a Resume overlay. Browsers block sound
-  without a user gesture. `resumeAt` clears on first PLAYING or any track change. The position
-  is written to the URL every ~2 s (`ListenView.onProgress`).
+- **Program:** `playProgram(label, ids, { shuffle })` plays an explicit list first (title page
+  ▶ Play / ⤮ Shuffle, *Play what's new*, track search *Play all*). It ignores filters except
+  banned/unavailable; `prev()` puts the current track back on it; `stopProgram()` returns to the
+  shuffle. Persisted with the session.
+- `next({ skipped, elapsed })`, `playNow(id)`, `prev()` (back stack of 50), `reroll()`.
+- **Resume:** on load, `?track=&t=` become `currentId` + `resumeAt`; the player *cues* at that
+  offset and shows a Resume overlay (browsers block sound without a gesture).
 
 ## Player (src/components/YouTubePlayer.tsx)
 
@@ -57,3 +79,10 @@ next/previous, keyboard play/pause) to that frame, and the embedded player ignor
 page the routed media session, and registers `navigator.mediaSession` handlers (play, pause,
 nexttrack → skip, previoustrack → back) plus metadata (track, game, composers, cover). Playing the
 silent element needs a prior click on the page (always true once you've pressed play).
+
+## Pop-out player (src/components/PopOutPlayer.tsx)
+
+The ⧉ button opens a 360×132 always-on-top window via the Document Picture-in-Picture API
+(Chrome/Edge 116+; hidden elsewhere). Audio stays in the main tab's YouTube iframe; the pop-out
+has its own React root (events don't cross documents through portals), the app's stylesheets
+copied in, and calls back into the session for play/pause, next, previous, like.

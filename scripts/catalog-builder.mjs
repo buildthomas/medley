@@ -10,14 +10,24 @@
 // Sources: Wikidata (SPARQL) and SteamSpy's public "Indie" tag list. No API keys.
 
 import { enrichGames } from './enrich.mjs';
+import { sparql as wdSparql } from './wd.mjs';
 
 const MIN_LINKS = 12; // base catalog: games with >= this many Wikipedia language editions
 const PER_YEAR = 40; // "biggest games" per year
 const INDIE_PER_YEAR = 15;
 const FIRST_YEAR = 2010;
 
-const ENDPOINT = 'https://query.wikidata.org/sparql';
-const UA = 'vgm-shuffle/0.2 (personal hobby project; catalog build)';
+const UA = 'medley/0.4 (personal hobby project; catalog build)';
+
+// What counts as a game. Plain "video game" (Q7889) misses whole families of notable titles:
+// paired releases (Fire Emblem Fates, Zelda: Oracle of Seasons/Ages, NieR), compilations,
+// remasters/reboots, expansions with their own soundtracks, and Roblox experiences.
+const GAME_CLASSES = ['Q7889', 'Q116809654', 'Q16070115', 'Q65963104', 'Q111223304', 'Q209163', 'Q113574332'];
+const CANCELLED = 'Q61475894';
+/** SPARQL snippet binding ?game to anything of a game class (and not cancelled). */
+const isGame = (v = '?game') =>
+  `VALUES ?gcls { ${GAME_CLASSES.map((q) => 'wd:' + q).join(' ')} } ${v} wdt:P31 ?gcls .
+   FILTER NOT EXISTS { ${v} wdt:P31 wd:${CANCELLED} }`;
 
 const NINTENDO_PUBLISHERS = ['Q8093' /* Nintendo */, 'Q1036616' /* The Pokémon Company */];
 // [id, name, Wikidata platform items, launch year]. Games first released before the
@@ -38,23 +48,8 @@ const NINTENDO_CONSOLES = [
   ['3ds', 'Nintendo 3DS', ['Q203597', 'Q17679679'], 2011],
 ];
 
-async function sparql(query) {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/sparql-results+json',
-        'User-Agent': UA,
-      },
-      body: new URLSearchParams({ query }),
-    });
-    if (res.ok) return (await res.json()).results.bindings;
-    console.warn(`  SPARQL ${res.status}, retrying…`);
-    await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
-  }
-  throw new Error('SPARQL failed repeatedly');
-}
+// Retries network errors and responses cut off mid-stream (see gotchas).
+const sparql = (query) => wdSparql(query, { log: console.warn });
 
 const qid = (uri) => uri.split('/').pop();
 
@@ -112,7 +107,8 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
   log(`Base catalog: games with >= ${MIN_LINKS} sitelinks…`);
   for (const r of await sparql(`
     SELECT ?game ?links WHERE {
-      ?game wdt:P31 wd:Q7889 ; wikibase:sitelinks ?links .
+      ${isGame()}
+      ?game wikibase:sitelinks ?links .
       FILTER(?links >= ${MIN_LINKS})
     }`))
     pop.set(qid(r.game.value), Number(r.links.value));
@@ -126,7 +122,8 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
     SELECT DISTINCT ?game ?platform ?links WHERE {
       VALUES ?pub { ${NINTENDO_PUBLISHERS.map((q) => 'wd:' + q).join(' ')} }
       VALUES ?platform { ${[...consoleOf.keys()].map((q) => 'wd:' + q).join(' ')} }
-      ?game wdt:P31 wd:Q7889 ; wdt:P123 ?pub ; wdt:P400 ?platform ; wikibase:sitelinks ?links .
+      ${isGame()}
+      ?game wdt:P123 ?pub ; wdt:P400 ?platform ; wikibase:sitelinks ?links .
       FILTER(?links >= 4)
     }`)) {
     const id = qid(r.game.value);
@@ -140,7 +137,8 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
   const firstYear = new Map();
   for (const r of await sparql(`
     SELECT ?game ?links (MIN(?date) AS ?first) WHERE {
-      ?game wdt:P31 wd:Q7889 ; wikibase:sitelinks ?links ; wdt:P577 ?date .
+      ${isGame()}
+      ?game wikibase:sitelinks ?links ; wdt:P577 ?date .
       FILTER(?links >= 8)
     } GROUP BY ?game ?links`)) {
     const y = Number(r.first.value.slice(0, 4));
@@ -174,7 +172,8 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
     const rows = await sparql(`
       SELECT ?game ?app ?links (MIN(?date) AS ?first) WHERE {
         VALUES ?app { ${batch.map((g) => `"${g.appid}"`).join(' ')} }
-        ?game wdt:P1733 ?app ; wdt:P31 wd:Q7889 ; wikibase:sitelinks ?links ; wdt:P577 ?date .
+        ${isGame()}
+        ?game wdt:P1733 ?app ; wikibase:sitelinks ?links ; wdt:P577 ?date .
       } GROUP BY ?game ?app ?links`);
     const positive = new Map(batch.map((g) => [String(g.appid), g.positive]));
     for (const r of rows)
@@ -207,10 +206,10 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
   for (let i = 0; i < ids.length; i += BATCH) {
     const batch = ids.slice(i, i + BATCH);
     const rows = await sparql(`
-      SELECT ?game ?label ?date ?genreLabel ?seriesLabel ?composerLabel ?steam WHERE {
+      SELECT ?game ?label ?date ?prec ?genreLabel ?seriesLabel ?composerLabel ?steam WHERE {
         VALUES ?game { ${batch.map((id) => 'wd:' + id).join(' ')} }
         ${label('?game', '?label')}
-        OPTIONAL { ?game wdt:P577 ?date }
+        OPTIONAL { ?game p:P577/psv:P577 [ wikibase:timeValue ?date ; wikibase:timePrecision ?prec ] }
         OPTIONAL { ?game wdt:P1733 ?steam }
         OPTIONAL { ?game wdt:P136 ?g . ${label('?g', '?genreLabel')} }
         OPTIONAL { ?game wdt:P179 ?s . ${label('?s', '?seriesLabel')} }
@@ -221,12 +220,14 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
       const id = qid(r.game.value);
       let g = games.get(id);
       if (!g) {
-        g = { id, title: r.label.value, year: null, genreLabels: new Set(), series: null, composers: new Set(), steam: null };
+        g = { id, title: r.label.value, year: null, first: null, genreLabels: new Set(), series: null, composers: new Set(), steam: null };
         games.set(id, g);
       }
       if (r.date) {
         const y = Number(r.date.value.slice(0, 4));
         if (y > 1950 && (!g.year || y < g.year)) g.year = y;
+        // Earliest release, with its precision: 11 = day, 10 = month, 9 = year.
+        if (y > 1950 && (!g.first || r.date.value < g.first.value)) g.first = { value: r.date.value, prec: Number(r.prec?.value ?? 9) };
       }
       if (r.steam && !g.steam) g.steam = Number(r.steam.value) || null;
       if (r.genreLabel) g.genreLabels.add(r.genreLabel.value);
@@ -240,6 +241,7 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
       id: g.id,
       title: g.title,
       year: g.year,
+      ...(g.first && g.first.prec >= 10 ? { date: g.first.value.slice(0, g.first.prec >= 11 ? 10 : 7) } : {}),
       genres: bucketGenres(g.genreLabels),
       series: g.series,
       composers: [...g.composers].slice(0, 4),

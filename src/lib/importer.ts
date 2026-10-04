@@ -1,8 +1,10 @@
-// Turns a YouTube playlist/video into games + tracks, and auto-finds a good
-// soundtrack playlist for a catalog game.
+// Turns YouTube playlists/videos into works + tracks, and auto-finds a good source for a
+// catalog work. Games, films and series import a soundtrack playlist; anime import their
+// OP/ED songs (plus the OST) via importers/anime.ts; artists import their popular songs via
+// importers/artist.ts.
 
 import { db } from '../db';
-import type { CatalogGame, Game, Source, Track } from '../types';
+import type { CatalogGame, Game, Source, Track, TrackRole, WorkKind } from '../types';
 import {
   fetchPlaylist,
   fetchVideo,
@@ -13,6 +15,7 @@ import {
   type PlaylistHit,
 } from './api';
 import { loadCatalog } from './catalog';
+import { kindOf } from './kinds';
 import { cleanGameName, cleanTrackTitle, detectTypes, normalize, parseChapters } from './parse';
 
 export interface DraftTrack {
@@ -25,31 +28,106 @@ export interface DraftTrack {
   duration: number | null;
   types: string[];
   include: boolean;
+  vocal?: boolean;
+  artist?: string;
+  role?: TrackRole;
+  seq?: number | null;
 }
 
 export interface DraftGroup {
   key: string;
   title: string;
   catalogId: string | null;
-  /** Metadata for games that aren't in the bundled catalog (e.g. looked up for a Steam library). */
+  /** Metadata for works that aren't in the bundled catalog (e.g. a Steam library lookup, a found artist). */
   meta?: CatalogGame;
   tracks: DraftTrack[];
 }
 
 export interface ImportDraft {
-  source: { id: string; kind: 'playlist' | 'video'; title: string; channel: string };
+  source: { id: string; kind: Source['kind']; title: string; channel: string };
   groups: DraftGroup[];
+}
+
+// ---- vocal / score detection for film & TV soundtracks ----------------------------------------
+
+const VOCAL_TITLE = /\b(feat\.?|ft\.|featuring)\s|\bsings?\b|\bsong\b|\breprise\b|\bduet\b|\bvocal\b|\blyrics?\b/i;
+const VARIOUS = /^various artists?$/i;
+// Songs on a soundtrack album are usually annotated with where they're from.
+const FROM_WORK = /[([]\s*from (the )?(series|film|movie|motion picture|netflix|disney|original)/i;
+// Score cues often look like "Main Title - …" or "Suite - …"; those aren't artists.
+const SCORE_CUE = /\b(theme|title|suite|main|end|opening|prologue|finale|overture|credits|interlude|part|act|chapter|scene|cue)\b|^\d/i;
+
+interface ClassifyCtx {
+  kind: WorkKind;
+  composers: string[];
+  workNames: string[];
+  artistNames: Set<string>;
+  musical?: boolean;
+}
+
+/**
+ * Is a film/series soundtrack track a song or score? Clues, strongest first:
+ *   - "(Instrumental)", "Score" in the title → score
+ *   - uploaded by "<Performer> - Topic" or a known artist's channel: the composer → score,
+ *     anyone else → a song by them (Let It Go → Idina Menzel; Annihilate → Metro Boomin)
+ *   - vocal words (feat., reprise, song) or a soundtrack-album annotation: "(from the film …)",
+ *     or the film's own name in brackets: "Calling (Spider-Man: Across the Spider-Verse)"
+ *   - "Artist - Song" / "Song - Artist" where one side is a known artist or lists several
+ *     ("Metro Boomin, Coi Leray - Self Love"); in musicals any "Song - Performer"
+ */
+function classifyScreenTrack(rawTitle: string, channel: string | undefined, ctx: ClassifyCtx) {
+  const { composers, workNames } = ctx;
+  const song = (artist?: string) => ({ vocal: true, role: 'song' as const, ...(artist ? { artist } : {}) });
+  const score = { vocal: false, role: 'score' as const };
+  // An instrumental/karaoke version is never a sung track, whoever uploaded it.
+  if (/\b(instrumental|karaoke|off vocal|score)\b/i.test(rawTitle)) return score;
+  // Anime OST playlists are the composer's score (AniList doesn't list composers, so the
+  // performer rules can't tell); its songs come from AnimeThemes. Only explicit vocal hints count.
+  if (ctx.kind === 'anime') return VOCAL_TITLE.test(rawTitle) ? song() : score;
+
+  const isComposer = (p: string) =>
+    composers.some((c) => {
+      const a = normalize(c);
+      const b = normalize(p);
+      return a && b && (a.includes(b) || b.includes(a));
+    });
+  const known = (p: string) => ctx.artistNames.has(normalize(p));
+  const performer = channel?.replace(/\s*-\s*topic$/i, '').trim();
+  if (performer && !VARIOUS.test(performer) && (/-\s*topic$/i.test(channel ?? '') || known(performer))) {
+    return isComposer(performer) ? score : song(performer);
+  }
+  if (VOCAL_TITLE.test(rawTitle) || FROM_WORK.test(rawTitle)) return song();
+  const brackets = [...rawTitle.matchAll(/[([]([^)\]]+)[)\]]/g)].map((m) => m[1]);
+  if (brackets.some((b) => !/soundtrack|\bost\b|score|intro|outro/i.test(b) && workNames.some((w) => w.length > 3 && normalize(b).includes(w)))) {
+    return song();
+  }
+
+  const parts = rawTitle.split(/\s[-–—]\s/);
+  if (parts.length === 2) {
+    const [left, right] = parts.map((p) => p.replace(/[([][^)\]]*[)\]]/g, '').trim());
+    const several = (p: string) => /,|&|\bfeat\b|\band\b/i.test(p);
+    const usable = (p: string) => p && !isComposer(p) && !SCORE_CUE.test(p) && !workNames.some((w) => normalize(p).includes(w));
+    if ((known(left) || several(left)) && usable(left)) return song(left);
+    if ((known(right) || several(right)) && usable(right)) return song(right);
+    // In a musical, "Song - Performer" is a sung number even when the performer is an actor.
+    if (ctx.musical && usable(left) && usable(right)) return song();
+  }
+  return { vocal: undefined, role: undefined };
 }
 
 function makeTrack(
   videoId: string,
   rawTitle: string,
   duration: number | null,
-  gameTitles: string[],
+  names: string[],
   slice?: { start: number; end: number | null },
+  ctx?: { kind?: WorkKind; channel?: string; composers?: string[]; artistNames?: Set<string>; musical?: boolean },
 ): DraftTrack {
-  const title = cleanTrackTitle(rawTitle, gameTitles);
-  return {
+  // The uploader of an album track ("Hiroyuki Sawano - Topic") often repeats in its title.
+  const performer = ctx?.channel && /-\s*topic$/i.test(ctx.channel) ? ctx.channel.replace(/\s*-\s*topic$/i, '') : null;
+  const title = cleanTrackTitle(rawTitle, performer ? [...names, performer] : names);
+  const types = detectTypes(rawTitle, duration, !!slice);
+  const track: DraftTrack = {
     key: slice ? `${videoId}@${slice.start}` : videoId,
     videoId,
     rawTitle,
@@ -57,22 +135,46 @@ function makeTrack(
     start: slice?.start,
     end: slice?.end ?? undefined,
     duration: slice ? (slice.end != null ? slice.end - slice.start : null) : duration,
-    types: detectTypes(rawTitle, duration, !!slice),
+    types,
     include: true,
   };
+  const kind = ctx?.kind ?? 'game';
+  if (kind === 'film' || kind === 'series' || kind === 'anime') {
+    const c = classifyScreenTrack(rawTitle, ctx?.channel, {
+      kind,
+      composers: ctx?.composers ?? [],
+      workNames: names.map(normalize).filter(Boolean),
+      artistNames: ctx?.artistNames ?? new Set(),
+      musical: ctx?.musical,
+    });
+    if (c.vocal != null) track.vocal = c.vocal;
+    if (c.role) track.role = c.role;
+    if ('artist' in c && c.artist) track.artist = c.artist;
+    if (track.vocal && !types.includes('vocal')) track.types = [...types, 'vocal'];
+  }
+  return track;
 }
 
 export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): Promise<ImportDraft> {
-  const { matcher } = await loadCatalog();
+  const { matcher, artistNames } = await loadCatalog();
+  const ctx = forceGame
+    ? {
+        kind: kindOf(forceGame),
+        composers: forceGame.composers,
+        artistNames,
+        musical: forceGame.keywords?.includes('Musical') || forceGame.genres.includes('Musical'),
+      }
+    : undefined;
+  const altNames = forceGame?.altTitles ?? [];
 
   if (link.kind === 'video') {
     const v = await fetchVideo(link.id);
     const guess = forceGame ? { title: forceGame.title, catalog: forceGame } : matcher.guessGame(v.title);
-    const names = [guess.title, cleanGameName(v.title), ...(guess.catalog?.composers ?? [])];
+    const names = [guess.title, ...altNames, cleanGameName(v.title), ...(guess.catalog?.composers ?? [])];
     const chapters = parseChapters(v.description, v.duration);
     const tracks = chapters.length
-      ? chapters.map((c) => makeTrack(v.id, c.title, v.duration, names, { start: c.start, end: c.end }))
-      : [makeTrack(v.id, v.title, v.duration, names)];
+      ? chapters.map((c) => makeTrack(v.id, c.title, v.duration, names, { start: c.start, end: c.end }, ctx))
+      : [makeTrack(v.id, v.title, v.duration, names, undefined, { ...ctx, channel: v.channel })];
     return {
       source: { id: v.id, kind: 'video', title: v.title, channel: v.channel },
       groups: [{ key: guess.title, title: guess.title, catalogId: guess.catalog?.id ?? null, meta: forceGame, tracks }],
@@ -84,7 +186,7 @@ export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): 
   const cleanedPlaylist = cleanGameName(p.title);
 
   if (forceGame) {
-    const names = [forceGame.title, cleanedPlaylist, ...forceGame.composers];
+    const names = [forceGame.title, ...altNames, cleanedPlaylist, ...forceGame.composers];
     return {
       source,
       groups: [
@@ -93,7 +195,7 @@ export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): 
           title: forceGame.title,
           catalogId: forceGame.id,
           meta: forceGame,
-          tracks: p.items.map((i) => makeTrack(i.videoId, i.title, i.duration, names)),
+          tracks: p.items.map((i) => makeTrack(i.videoId, i.title, i.duration, names, undefined, { ...ctx, channel: i.channel })),
         },
       ],
     };
@@ -138,9 +240,14 @@ export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): 
   return { source, groups: [...groups.values()].sort((a, b) => b.tracks.length - a.tracks.length) };
 }
 
-/** Catalog fields copied onto library games so the shuffle can filter on them. */
-export function gameMetaFrom(cat: CatalogGame): Pick<Game, 'franchise' | 'platforms' | 'keywords'> {
-  return { franchise: cat.franchise ?? cat.series ?? null, platforms: cat.tags?.platform ?? [], keywords: cat.keywords ?? [] };
+/** Catalog fields copied onto library works so the shuffle can filter on them. */
+export function gameMetaFrom(cat: CatalogGame): Pick<Game, 'franchise' | 'platforms' | 'keywords' | 'kind'> {
+  return {
+    kind: kindOf(cat),
+    franchise: cat.franchise ?? cat.series ?? null,
+    platforms: cat.tags?.platform ?? [],
+    keywords: cat.keywords ?? [],
+  };
 }
 
 function slug(s: string) {
@@ -179,13 +286,18 @@ export async function commitDraft(draft: ImportDraft): Promise<number> {
       const existing = await db.tracks.bulkGet(ids);
       const rows: Track[] = included.map((t, i) => {
         const prev = existing[i];
-        if (prev) return { ...prev, gameId, title: t.title, types: t.types };
+        // Re-importing keeps plays/likes, and a name you gave the track yourself.
+        if (prev) return { ...prev, gameId, title: prev.customTitle ? prev.title : t.title, types: t.types };
         added++;
         return {
           id: t.key,
           gameId,
           videoId: t.videoId,
           title: t.title,
+          ...(t.artist ? { artist: t.artist } : {}),
+          ...(t.role ? { role: t.role } : {}),
+          ...(t.seq != null ? { seq: t.seq } : {}),
+          ...(t.vocal != null ? { vocal: t.vocal } : {}),
           start: t.start,
           end: t.end,
           duration: t.duration,
@@ -214,16 +326,50 @@ export async function commitDraft(draft: ImportDraft): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-discovery for catalog games
+// Auto-discovery: finding a soundtrack playlist for a catalog work
 
-const BAD = /movie|motion picture|\bfilm\b|\banime\b|\bseries\b|remix|\bcover|piano|guitar|8.?bit|lo-?fi|chill|\bhours?\b|reaction|playthrough|walkthrough|longplay|gameplay|let'?s play|trailer|speedrun|tutorial|\bamv\b|nightcore|orchestra(l)? (cover|arrangement)|sleep|study|relax/i;
-const GOOD = /\bost\b|soundtrack|sound track|\bbgm\b|original score|\bmusic\b/i;
-const OFFICIAL = /- topic$|official|music channel|records|sound team/i;
+interface Vocab {
+  queries: (w: CatalogGame) => string[];
+  good: RegExp;
+  bad: RegExp;
+}
+
+const COMMON_BAD =
+  /remix|\bcover|piano|guitar|8.?bit|lo-?fi|chill|\bhours?\b|reaction|trailer|speedrun|tutorial|\bamv\b|nightcore|sleep|study|relax|\bslowed\b|sped up|\b8d\b|karaoke/i;
+
+const VOCAB: Record<'game' | 'screen' | 'anime', Vocab> = {
+  game: {
+    queries: (g) => [`${g.title} OST`, `${g.title} original soundtrack`],
+    good: /\bost\b|soundtrack|sound track|\bbgm\b|original score|\bmusic\b/i,
+    bad: new RegExp(`${COMMON_BAD.source}|movie|motion picture|\\bfilm\\b|\\banime\\b|\\bseries\\b|playthrough|walkthrough|longplay|gameplay|let'?s play|orchestra(l)? (cover|arrangement)`, 'i'),
+  },
+  screen: {
+    queries: (w) =>
+      kindOf(w) === 'series'
+        ? [`${w.title} soundtrack`, `${w.title} original series soundtrack`, `${w.title} OST`]
+        : [`${w.title} soundtrack`, `${w.title} original motion picture soundtrack`, `${w.title} songs`],
+    good: /soundtrack|\bost\b|\bscore\b|motion picture|music from|\bsongs\b|original series/i,
+    bad: new RegExp(`${COMMON_BAD.source}|video ?game|gameplay|full movie|movie clip|\\bscenes?\\b|explained|\\breview\\b|tiktok|instrumental version`, 'i'),
+  },
+  anime: {
+    queries: (a) => [`${a.title} OST`, ...(a.altTitles?.[0] ? [`${a.altTitles[0]} OST`] : []), `${a.title} original soundtrack`],
+    good: /\bost\b|soundtrack|\bbgm\b|original score|\bmusic\b|サウンドトラック/i,
+    bad: new RegExp(`${COMMON_BAD.source}|video ?game|gameplay|opening|ending|\\bop\\b|\\bed\\b|amv`, 'i'),
+  },
+};
+
+const vocabFor = (w: CatalogGame) => {
+  const k = kindOf(w);
+  return k === 'film' || k === 'series' ? VOCAB.screen : k === 'anime' ? VOCAB.anime : VOCAB.game;
+};
+
+const OFFICIAL = /- topic$|official|music channel|records|sound team|\bvevo\b|disney|pixar|netflix|hbo|sony|warner|universal|lakeshore|milan|walt disney records/i;
 
 const FILLER = new Set(
   ('the a of and ost original soundtrack soundtracks sound track game video music full complete official score bgm ' +
     'playlist album audio hd hq remastered remaster edition collection deluxe expanded vol volume disc cd nes snes ' +
-    'n64 gamecube wii switch ps1 ps2 ps3 ps4 ps5 psx xbox pc genesis gba ds 3ds all tracks with dlc by').split(' '),
+    'n64 gamecube wii switch ps1 ps2 ps3 ps4 ps5 psx xbox pc genesis gba ds 3ds all tracks with dlc by ' +
+    'motion picture picture songs song from series season netflix tv television film movie anime').split(' '),
 );
 
 export interface Candidate {
@@ -233,23 +379,33 @@ export interface Candidate {
 
 export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHit[]): Promise<Candidate[]> {
   const { matcher } = await loadCatalog();
-  const target = ` ${normalize(game.title)} `;
+  const vocab = vocabFor(game);
+  const names = [game.title, ...(game.altTitles ?? [])].map((n) => ` ${normalize(n)} `).filter((n) => n.trim());
   return hits
     .map((hit) => {
       const t = ` ${normalize(hit.title)} `;
-      let score = 0;
-      if (t.includes(target)) score += 6;
-      else return { hit, score: -100 };
-      // Words that aren't the game name or OST boilerplate suggest a different
-      // product ("Saint Seiya Hades OST" when looking for "Hades").
+      const target = names.find((n) => t.includes(n));
+      if (!target) return { hit, score: -100 };
+      let score = 6;
+      // Words that aren't the title or OST boilerplate suggest a different product
+      // ("Saint Seiya Hades OST" when looking for "Hades").
       const before = t.slice(0, t.indexOf(target)).trim().split(' ').filter((w) => w && !FILLER.has(w));
-      const after = t.slice(t.indexOf(target) + target.length).trim().split(' ').filter((w) => w && !FILLER.has(w) && !/^\d+$/.test(w));
+      const after = t
+        .slice(t.indexOf(target) + target.length)
+        .trim()
+        .split(' ')
+        .filter((w) => w && !FILLER.has(w) && !/^\d+$/.test(w));
       score -= 2.5 * Math.min(before.length, 3) + 0.75 * Math.min(after.length, 4);
-      const matched = matcher.match(hit.title);
-      // e.g. searching "Final Fantasy VII" but the playlist is "Final Fantasy VII Remake".
-      if (matched && matched.id !== game.id && normalize(matched.title).length > target.trim().length) score -= 7;
-      if (GOOD.test(hit.title)) score += 3;
-      if (BAD.test(hit.title)) score -= 6;
+      if (kindOf(game) === 'game') {
+        const matched = matcher.match(hit.title);
+        // e.g. searching "Final Fantasy VII" but the playlist is "Final Fantasy VII Remake".
+        if (matched && matched.id !== game.id && normalize(matched.title).length > target.trim().length) score -= 7;
+      }
+      // "Moana (2026)" when looking for the 2016 Moana: a different year means a different work.
+      const years = [...hit.title.matchAll(/\b(19[5-9]\d|20[0-4]\d)\b/g)].map((m) => Number(m[1]));
+      if (game.year && years.length) score += years.some((y) => Math.abs(y - game.year!) <= 1) ? 1 : -6;
+      if (vocab.good.test(hit.title)) score += 3;
+      if (vocab.bad.test(hit.title)) score -= 6;
       if (OFFICIAL.test(hit.channel)) score += 1.5;
       if (hit.title.startsWith('Album - ') || hit.id.startsWith('OLAK5uy_')) score += 1.5;
       const n = hit.videoCount ?? 0;
@@ -264,10 +420,9 @@ export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHi
 }
 
 export async function findCandidates(game: CatalogGame): Promise<Candidate[]> {
-  const queries = [`${game.title} OST`, `${game.title} original soundtrack`];
   const seen = new Set<string>();
   const hits: PlaylistHit[] = [];
-  for (const q of queries) {
+  for (const q of vocabFor(game).queries(game)) {
     for (const h of await searchPlaylists(q)) {
       if (!seen.has(h.id)) {
         seen.add(h.id);
@@ -288,9 +443,13 @@ export interface AutoAddResult {
   candidates: Candidate[];
 }
 
-/** Finds the best soundtrack source for a catalog game and imports it. */
+/** Finds the best music source for a catalog work and imports it. */
 export async function autoAddGame(game: CatalogGame, pick?: PlaylistHit): Promise<AutoAddResult> {
-  // Games with hand-picked sources (my-games.json) skip the search entirely.
+  const kind = kindOf(game);
+  if (!pick && kind === 'artist') return (await import('./importers/artist')).importArtist(game);
+  if (!pick && kind === 'anime') return (await import('./importers/anime')).importAnime(game);
+
+  // Works with hand-picked sources (my-games.json) skip the search entirely.
   if (!pick && game.sources?.length) {
     let added = 0;
     let last = { title: '', id: '' };
@@ -310,19 +469,36 @@ export async function autoAddGame(game: CatalogGame, pick?: PlaylistHit): Promis
     return { added, sourceTitle: pick.title, sourceId: pick.id, candidates: [] };
   }
 
+  return importSoundtrackPlaylist(game);
+}
+
+/** The playlist route (games, films, series, anime OSTs), with a full-OST-video fallback. */
+export async function importSoundtrackPlaylist(game: CatalogGame): Promise<AutoAddResult> {
   const candidates = await findCandidates(game);
   const best = await bestPlaylistDraft(game, candidates);
   if (best) {
-    const added = await commitDraft(best.draft);
-    return { added, sourceTitle: best.hit.title, sourceId: best.hit.id, candidates };
+    let added = await commitDraft(best.draft);
+    let sourceTitle = best.hit.title;
+    // Films often have two albums: the score and the songs ("Across the Spider-Verse (Original
+    // Score)" vs "(Soundtrack from and Inspired by…)"). Take the other one too when it exists.
+    const k = kindOf(game);
+    if (k === 'film' || k === 'series') {
+      const extra = await complementaryAlbum(game, candidates, best.hit, best.draft);
+      if (extra) {
+        added += await commitDraft(extra.draft);
+        sourceTitle += ` + “${extra.hit.title}”`;
+      }
+    }
+    return { added, sourceTitle, sourceId: best.hit.id, candidates };
   }
 
   // No decent playlist: look for a single full-OST video with a timestamped tracklist.
   const videos = await searchVideos(`${game.title} full soundtrack`);
   const target = ` ${normalize(game.title)} `;
+  const bad = vocabFor(game).bad;
   for (const v of videos.slice(0, 8)) {
     if (!(v.duration && v.duration > 15 * 60)) continue;
-    if (!` ${normalize(v.title)} `.includes(target) || BAD.test(v.title)) continue;
+    if (!` ${normalize(v.title)} `.includes(target) || bad.test(v.title)) continue;
     const draft = await draftFromLink({ kind: 'video', id: v.id }, game);
     if (draft.groups[0].tracks.length < 4) continue;
     const added = await commitDraft(draft);
@@ -331,8 +507,36 @@ export async function autoAddGame(game: CatalogGame, pick?: PlaylistHit): Promis
   throw Object.assign(new Error('No good soundtrack source found'), { candidates });
 }
 
+/**
+ * The other album of a film/series: songs if we got the score, or the score if we got songs.
+ * Songs albums are often titled after their curator ("Metro Boomin Presents Spider-Man: Across
+ * the Spider-Verse"), so the usual "extra words before the title" penalty is relaxed, and the
+ * album must really be mostly songs (≥ 40% vocal tracks) to count.
+ */
+async function complementaryAlbum(game: CatalogGame, candidates: Candidate[], main: PlaylistHit, mainDraft: ImportDraft) {
+  const tracks = mainDraft.groups[0]?.tracks ?? [];
+  const mainIsSongs = tracks.filter((t) => t.vocal).length / Math.max(1, tracks.length) >= 0.4;
+  const SONGS = /presents|inspired by|\bsongs\b|music from|soundtrack from/i;
+  const ranked = candidates
+    .filter((c) => c.hit.id !== main.id && c.score >= 0 && (c.hit.videoCount ?? 0) >= 5)
+    .map((c) => ({ ...c, score: c.score + (mainIsSongs ? (/\bscore\b/i.test(c.hit.title) ? 4 : 0) : SONGS.test(c.hit.title) ? 8 : 0) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+  for (const c of ranked) {
+    try {
+      const draft = await draftFromLink({ kind: 'playlist', id: c.hit.id }, game);
+      const t = draft.groups[0]?.tracks ?? [];
+      const vocalShare = t.filter((x) => x.vocal).length / Math.max(1, t.length);
+      if (mainIsSongs ? vocalShare < 0.3 : vocalShare >= 0.4) return { draft, hit: c.hit };
+    } catch {
+      /* try the next one */
+    }
+  }
+  return null;
+}
+
 // Japanese kana, CJK ideographs, half-width katakana, Hangul.
-const CJK = /[぀-ヿ㐀-鿿豈-﫿ｦ-ﾟ가-힯]/;
+const CJK = /[぀-ヿ㐀-鿿豈-﫿ｦ-ﾟ가-힯]/;
 
 /** Share of track titles written (partly) in Japanese/Chinese/Korean script. */
 export function foreignTitleRatio(titles: string[]): number {
@@ -359,7 +563,7 @@ async function bestPlaylistDraft(game: CatalogGame, candidates: Candidate[], exc
 }
 
 /**
- * For a library game whose track names are mostly non-English: look for an English source and
+ * For a library work whose track names are mostly non-English: look for an English source and
  * switch to it. Returns the new source title, or null when nothing better exists.
  */
 export async function preferEnglishSource(game: CatalogGame): Promise<string | null> {
@@ -379,7 +583,7 @@ export async function preferEnglishSource(game: CatalogGame): Promise<string | n
   return null;
 }
 
-/** Swap a game's tracks from one source for another. */
+/** Swap a work's tracks from one source for another. */
 export async function replaceSource(game: CatalogGame, oldSourceId: string, pick: PlaylistHit) {
   await db.tracks
     .where('gameId')
@@ -393,4 +597,28 @@ export async function replaceSource(game: CatalogGame, oldSourceId: string, pick
     else await db.sources.delete(s.id);
   }
   return autoAddGame(game, pick);
+}
+
+// ---------------------------------------------------------------------------
+// Tracks found one video at a time (anime OP/EDs, artist songs, a single song you add)
+
+/** Save individually found videos as tracks of `work`, under one pseudo-source. */
+export async function commitFoundTracks(
+  work: CatalogGame,
+  sourceId: string,
+  sourceTitle: string,
+  tracks: Omit<DraftTrack, 'include' | 'rawTitle' | 'key'>[],
+): Promise<number> {
+  return commitDraft({
+    source: { id: sourceId, kind: 'search', title: sourceTitle, channel: '' },
+    groups: [
+      {
+        key: work.id,
+        title: work.title,
+        catalogId: work.id,
+        meta: work,
+        tracks: tracks.map((t) => ({ ...t, key: t.start != null ? `${t.videoId}@${t.start}` : t.videoId, rawTitle: t.title, include: true })),
+      },
+    ],
+  });
 }

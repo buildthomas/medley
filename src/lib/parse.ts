@@ -54,8 +54,13 @@ const NOISE_WORDS =
 
 const SEPARATORS = /^[\s\-–—|:~·,+/]+|[\s\-–—|:~·,+/]+$/g;
 
+// Soundtrack-album annotations: (From "Frozen"/Soundtrack Version), (from the series Arcane League of Legends)
+const FROM_ANNOTATION = /^\s*(taken from|music from|from)\b/i;
+
 function stripBrackets(s: string): string {
-  return s.replace(/[([【{]([^)\]】}]*)[)\]】}]/g, (m, inner) => (NOISE_IN_BRACKETS.test(inner) ? ' ' : m));
+  return s.replace(/[([【{]([^)\]】}]*)[)\]】}]/g, (m, inner) =>
+    NOISE_IN_BRACKETS.test(inner) || FROM_ANNOTATION.test(inner) ? ' ' : m,
+  );
 }
 
 export function cleanGameName(raw: string): string {
@@ -96,9 +101,10 @@ function nameVariants(names: string[]): string[] {
 export function cleanTrackTitle(raw: string, names: string[]): string {
   let s = stripBrackets(raw);
   for (const g of nameVariants(names)) {
-    s = s.replace(new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRe(g)}(?=$|[^\\p{L}\\p{N}])`, 'giu'), '$1 ');
+    // Not before a possessive: "Frieren's Aura" keeps its name.
+    s = s.replace(new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRe(g)}(?=$|[^\\p{L}\\p{N}'’])`, 'giu'), '$1 ');
   }
-  s = s.replace(NOISE_WORDS, ' ');
+  s = s.replace(NOISE_WORDS, ' ').replace(/\bbonus track\b/gi, ' ');
   // Tidy what the removals left behind: "( : Gods & Nightmares)", "()", " - , Vol 1", "Boss - 14".
   s = s
     .replace(/([([【{])[\s:\-–—]+/g, '$1')

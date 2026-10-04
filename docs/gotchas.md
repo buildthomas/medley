@@ -38,3 +38,22 @@
 16. **Headset "next" did nothing** → media keys go to the frame that plays audio (YouTube's iframe),
     which ignores next/previous → the page plays a silent loop so it becomes the media session
     (`src/lib/mediaSession.ts`). If media keys stop working, check that the silent element is playing.
+17. **Fire Emblem Fates, NieR, Zelda: Oracle games missing** → they aren't `P31 video game` on
+    Wikidata but *paired versions of a video game* (Q116809654), remakes, remasters… → filter on
+    `GAME_CLASSES` (catalog-builder.mjs), never on Q7889 alone. When a title is missing, check
+    its `P31` first.
+18. **"Nintendo first-party" lacked Mario Kart World / DK Bananza** → they were in the Switch 2
+    list, but the home shelf only showed Switch → *Latest from Nintendo* merges both consoles by date.
+19. **SPARQL "Unexpected end of JSON"** → Wikidata truncates big responses mid-stream (HTTP 200).
+    `wd.sparql` retries on parse errors; split huge queries (artists are queried per occupation).
+20. **Wrong studio films** (Pixar list full of unrelated films) → wrong QIDs and first-match
+    assignment. Verify every QID on wikidata.org and order studios specific → general.
+21. **Variety slider did nothing audible** → a cooldown capped at 12 plays is invisible among
+    ~1,450 works. Variety now also controls "stay with this work" (see shuffle.md).
+22. **Regex/backtick corruption** (`\b` became a backspace character) after editing through
+    `node -e`/sed/heredocs → edit code with the Edit/Write tools; write multi-line patch scripts
+    to a file first. Check with `grep -rnP '\x08' src scripts server`.
+23. **Anime songs not found under English titles** → uploads use the romaji or Japanese title →
+    `altTitles` are searched and matched too; artist + song title is the strongest signal.
+24. **Discover shows "Loading catalog…" for a few seconds** → all four catalogs (~10 MB JSON)
+    load on first visit to Discover. Expected.
