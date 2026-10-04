@@ -77,15 +77,27 @@ export function useSession(filters: Filters) {
     });
   }, [games, tracks, filters, currentId, isPlayable, history]);
 
+  /**
+   * Switch to a track. The UI updates immediately; bookkeeping (play row, counters, and an
+   * early-skip mark on the previous track) is written afterwards in ONE transaction, because
+   * every write to `tracks` makes the live query re-read the whole library (~70k rows).
+   */
   const startTrack = useCallback(
-    async (id: string) => {
+    async (id: string, skipped?: Track | null) => {
       const t = trackMap.get(id);
       if (!t) return;
       setResumeAt(null);
       setCurrentId(id);
+      const prevPlayId = currentPlayId.current;
       const now = Date.now();
-      currentPlayId.current = (await db.plays.add({ trackId: t.id, gameId: t.gameId, at: now, skipped: false })) as number;
-      await db.tracks.update(t.id, { playCount: t.playCount + 1, lastPlayedAt: now });
+      await db.transaction('rw', db.plays, db.tracks, async () => {
+        if (skipped) {
+          if (prevPlayId != null) await db.plays.update(prevPlayId, { skipped: true });
+          await db.tracks.update(skipped.id, { skipCount: skipped.skipCount + 1 });
+        }
+        currentPlayId.current = (await db.plays.add({ trackId: t.id, gameId: t.gameId, at: now, skipped: false })) as number;
+        await db.tracks.update(t.id, { playCount: t.playCount + 1, lastPlayedAt: now });
+      });
     },
     [trackMap],
   );
@@ -93,14 +105,9 @@ export function useSession(filters: Filters) {
   /** Advance. `elapsed` lets us treat early skips as a (mild) dislike. */
   const next = useCallback(
     async (opts: { skipped?: boolean; elapsed?: number } = {}) => {
-      if (current && opts.skipped) {
-        const len = current.duration ?? 180;
-        const early = (opts.elapsed ?? 0) < Math.min(60, len * 0.5);
-        if (early) {
-          if (currentPlayId.current != null) await db.plays.update(currentPlayId.current, { skipped: true });
-          await db.tracks.update(current.id, { skipCount: current.skipCount + 1 });
-        }
-      }
+      // An early skip counts as a mild dislike (recorded together with the next play).
+      const early =
+        current && opts.skipped && (opts.elapsed ?? 0) < Math.min(60, (current.duration ?? 180) * 0.5) ? current : null;
       let nextId = queueIds.find(isPlayable);
       if (!nextId) {
         const t = pickNext(games, tracks, history(currentId ? [currentId] : []), filters);
@@ -109,7 +116,7 @@ export function useSession(filters: Filters) {
       if (!nextId) return;
       if (currentId) setBackStack((b) => [...b.slice(-49), currentId]);
       setQueueIds((q) => q.filter((id) => id !== nextId));
-      await startTrack(nextId);
+      await startTrack(nextId, early);
     },
     [current, currentId, queueIds, isPlayable, games, tracks, filters, history, startTrack],
   );
