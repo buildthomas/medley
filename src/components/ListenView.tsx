@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { db } from '../db';
 import { primaryLink, useCatalog } from '../lib/catalog';
+import { useMediaSession } from '../lib/mediaSession';
 import { TRACK_TYPES } from '../lib/parse';
 import { Cover } from './discover/Cover';
 import type { Session } from '../useSession';
@@ -47,6 +48,23 @@ export function ListenView({
   };
 
   const skip = () => session.next({ skipped: true, elapsed: player.current?.elapsed() ?? 0 });
+
+  // Headset / keyboard media keys and the OS now-playing panel.
+  useMediaSession(
+    {
+      title: current?.title ?? null,
+      game: currentGame?.title ?? null,
+      composers: currentGame?.composers ?? [],
+      cover: catGame?.covers?.[0] ?? null,
+      playing,
+    },
+    {
+      play: () => (current ? player.current?.play() : session.next()),
+      pause: () => player.current?.pause(),
+      next: skip,
+      previous: session.prev,
+    },
+  );
 
   // Keyboard: space = play/pause, → / N = skip, ← / P = previous, L = like, B = ban.
   useEffect(() => {

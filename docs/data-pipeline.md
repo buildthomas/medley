@@ -26,7 +26,9 @@ No API keys anywhere.
 4. **Indie per year:** SteamSpy indie apps with ≥ 1,500 positive reviews → Wikidata → top 15 per year.
 5. **Details** for all ids in 200-id batches (title, year, genres, series, composers, steam id).
 6. **Enrich** (`enrich.mjs`): tags & franchise (one batched query over many properties), store
-   links + enwiki title, Wikipedia covers (50 titles per request), Roblox icons, Steam keywords.
+   links + enwiki title (sorted Roblox > Steam > GOG > Epic > eShop > PlayStation > itch.io > Wikipedia),
+   Wikipedia covers (`wiki-covers.mjs`: 50 titles per request, paced, retried), Roblox icons,
+   Steam keywords. Coverage after a full build: covers ~99%, tags ~100%, keywords ~40% (Steam games only).
 7. Return `{ catalog, collections }`. `collections.generatedAt` is a full ISO timestamp.
 
 Tunables are constants at the top of `catalog-builder.mjs` (`MIN_LINKS`, `PER_YEAR`, …).

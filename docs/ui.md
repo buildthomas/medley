@@ -40,4 +40,5 @@ not on every render.
 ## Keyboard (ListenView)
 
 Space play/pause · N/→ skip · P/← back · L like · B never · ↑/↓ volume (Listen tab only) ·
-M mute. Ignored while typing in inputs.
+M mute. Ignored while typing in inputs. Headset/keyboard media keys (play/pause, next, previous)
+work through the Media Session API; see [shuffle.md](shuffle.md).

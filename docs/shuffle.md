@@ -44,7 +44,16 @@ Library games carry `franchise`/`platforms`/`keywords` copied from the catalog
 
 ## Player (src/components/YouTubePlayer.tsx)
 
-Wraps the IFrame API. Handle: `toggle`, `play`, `seek`, `elapsed`. Slices use
+Wraps the IFrame API. Handle: `toggle`, `play`, `pause`, `seek`, `elapsed`. Slices use
 `startSeconds`/`endSeconds` plus a 500 ms clock check, because `endSeconds` doesn't always
 fire ENDED. Error codes 2/100/101/150 mark the track `unavailable`. Volume is ours
 (`setVolume`/`mute`), and the 500 ms poll notices changes made in YouTube's UI and syncs them back.
+
+## Media keys and the OS now-playing panel (src/lib/mediaSession.ts)
+
+Audio comes from YouTube's cross-origin iframe, so browsers route hardware media keys (headset
+next/previous, keyboard play/pause) to that frame, and the embedded player ignores next/previous.
+`useMediaSession` loops a generated silent WAV in the top page while music plays, which makes the
+page the routed media session, and registers `navigator.mediaSession` handlers (play, pause,
+nexttrack → skip, previoustrack → back) plus metadata (track, game, composers, cover). Playing the
+silent element needs a prior click on the page (always true once you've pressed play).

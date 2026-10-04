@@ -109,7 +109,9 @@ markup and imports start failing, the parser in `server/youtube.ts` is the place
 - **Library:** rename tracks, fix tags, like/ban tracks, or remove games.
 
 Keys: <kbd>Space</kbd> play/pause, <kbd>N</kbd>/<kbd>→</kbd> skip, <kbd>P</kbd>/<kbd>←</kbd> back,
-<kbd>L</kbd> like, <kbd>B</kbd> never play, <kbd>↑</kbd>/<kbd>↓</kbd> volume, <kbd>M</kbd> mute.
+<kbd>L</kbd> like, <kbd>B</kbd> never play, <kbd>↑</kbd>/<kbd>↓</kbd> volume, <kbd>M</kbd> mute. Headset and
+keyboard media keys (play/pause, next, previous) work too, and the OS media panel shows the
+track, game and cover.
 
 **Picking up where you left off:** the current song, position and tab are kept in the URL
 (`?track=…&t=…`), and the up-next queue and back history in the browser. After a refresh or

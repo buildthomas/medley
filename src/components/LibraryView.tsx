@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { db, deleteGame } from '../db';
 import { primaryLink, useCatalog } from '../lib/catalog';
+import { foreignTitleRatio, preferEnglishSource } from '../lib/importer';
 import { TRACK_TYPES } from '../lib/parse';
 import { buildIndex, search } from '../lib/search';
 import { Cover } from './discover/Cover';
@@ -46,6 +47,27 @@ export function LibraryView({ session }: { session: Session }) {
             : plays(b) - plays(a),
     );
 
+  // Games whose track names are mostly Japanese/Chinese/Korean, which can be swapped for an English source.
+  const foreign = useMemo(
+    () => games.filter((g) => foreignTitleRatio((byGame.get(g.id) ?? []).map((t) => t.title)) > 0.5),
+    [games, byGame],
+  );
+  const [fixing, setFixing] = useState<string | null>(null);
+
+  async function fixForeign() {
+    let fixed = 0;
+    for (const [i, g] of foreign.entries()) {
+      setFixing(`Looking for English track names… ${i + 1}/${foreign.length}`);
+      const meta = cat?.byId.get(g.id) ?? { ...g, franchise: g.franchise ?? undefined, pop: 0 };
+      try {
+        if (await preferEnglishSource(meta)) fixed++;
+      } catch {
+        /* keep the current source */
+      }
+    }
+    setFixing(`Switched ${fixed} of ${foreign.length} games to English track names; the rest only exist in their original language.`);
+  }
+
   if (!games.length) return <Empty>No games yet. Add some from Discover or Add link.</Empty>;
 
   return (
@@ -61,6 +83,12 @@ export function LibraryView({ session }: { session: Session }) {
         <span className="muted">
           {games.length} games · {tracks.length.toLocaleString()} tracks
         </span>
+        {foreign.length > 0 && !fixing && (
+          <button className="link" onClick={fixForeign} title={foreign.map((g) => g.title).join(', ')}>
+            {foreign.length} games have non-English track names: find English versions
+          </button>
+        )}
+        {fixing && <span className="small">{fixing}</span>}
       </div>
 
       <ul className="lib-games">

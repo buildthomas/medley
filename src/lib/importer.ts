@@ -311,15 +311,10 @@ export async function autoAddGame(game: CatalogGame, pick?: PlaylistHit): Promis
   }
 
   const candidates = await findCandidates(game);
-  // Try the top few; reject playlists that turn out to be mostly 30-minute
-  // loops ("extended") or that have almost nothing playable.
-  for (const c of candidates.filter((c) => c.score >= 5).slice(0, 3)) {
-    const draft = await draftFromLink({ kind: 'playlist', id: c.hit.id }, game);
-    const tracks = draft.groups[0]?.tracks ?? [];
-    const normal = tracks.filter((t) => !t.types.includes('extended'));
-    if (normal.length < 3 || normal.length < tracks.length * 0.5) continue;
-    const added = await commitDraft(draft);
-    return { added, sourceTitle: c.hit.title, sourceId: c.hit.id, candidates };
+  const best = await bestPlaylistDraft(game, candidates);
+  if (best) {
+    const added = await commitDraft(best.draft);
+    return { added, sourceTitle: best.hit.title, sourceId: best.hit.id, candidates };
   }
 
   // No decent playlist: look for a single full-OST video with a timestamped tracklist.
@@ -334,6 +329,54 @@ export async function autoAddGame(game: CatalogGame, pick?: PlaylistHit): Promis
     return { added, sourceTitle: v.title, sourceId: v.id, candidates };
   }
   throw Object.assign(new Error('No good soundtrack source found'), { candidates });
+}
+
+// Japanese kana, CJK ideographs, half-width katakana, Hangul.
+const CJK = /[぀-ヿ㐀-鿿豈-﫿ｦ-ﾟ가-힯]/;
+
+/** Share of track titles written (partly) in Japanese/Chinese/Korean script. */
+export function foreignTitleRatio(titles: string[]): number {
+  return titles.length ? titles.filter((t) => CJK.test(t)).length / titles.length : 0;
+}
+
+/**
+ * Try the top candidates in order and return the first usable one, preferring English track
+ * names: a playlist whose titles are mostly Japanese/Chinese/Korean is only used if no
+ * English one passes. "Usable" = enough normal-length tracks (not mostly 30-minute loops).
+ * (YouTube already returns uploader-provided English titles because we request hl=en.)
+ */
+async function bestPlaylistDraft(game: CatalogGame, candidates: Candidate[], exclude?: string) {
+  let fallback: { draft: ImportDraft; hit: PlaylistHit } | null = null;
+  for (const c of candidates.filter((c) => c.score >= 5 && c.hit.id !== exclude).slice(0, 4)) {
+    const draft = await draftFromLink({ kind: 'playlist', id: c.hit.id }, game);
+    const tracks = draft.groups[0]?.tracks ?? [];
+    const normal = tracks.filter((t) => !t.types.includes('extended'));
+    if (normal.length < 3 || normal.length < tracks.length * 0.5) continue;
+    if (foreignTitleRatio(tracks.map((t) => t.title)) < 0.3) return { draft, hit: c.hit };
+    fallback ??= { draft, hit: c.hit };
+  }
+  return fallback;
+}
+
+/**
+ * For a library game whose track names are mostly non-English: look for an English source and
+ * switch to it. Returns the new source title, or null when nothing better exists.
+ */
+export async function preferEnglishSource(game: CatalogGame): Promise<string | null> {
+  const tracks = await db.tracks.where('gameId').equals(game.id).toArray();
+  if (foreignTitleRatio(tracks.map((t) => t.title)) <= 0.5) return null;
+  const current = tracks[0]?.sourceId;
+  const candidates = await findCandidates(game);
+  for (const c of candidates.filter((c) => c.score >= 5 && c.hit.id !== current).slice(0, 5)) {
+    const draft = await draftFromLink({ kind: 'playlist', id: c.hit.id }, game);
+    const titles = draft.groups[0]?.tracks.map((t) => t.title) ?? [];
+    if (titles.length >= 3 && foreignTitleRatio(titles) < 0.3) {
+      if (current) await replaceSource(game, current, c.hit);
+      else await commitDraft(draft);
+      return c.hit.title;
+    }
+  }
+  return null;
 }
 
 /** Swap a game's tracks from one source for another. */

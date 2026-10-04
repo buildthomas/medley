@@ -29,8 +29,12 @@ word after it (ignoring OST boilerplate, `FILLER`), +3 for OST words (`GOOD`), �
 remixes, movies, gameplay, hour-long loops (`BAD`), +1.5 official-looking channels / YouTube Music
 albums (`OLAK5uy_`), +2 for 8–250 videos, penalties for tiny or giant playlists.
 
-`autoAddGame` tries the top 3 with score ≥ 5 and rejects a playlist where under half the tracks
-are normal length (mostly "extended" loops). Fallback: a full-soundtrack *video* with a
+`autoAddGame` → `bestPlaylistDraft` tries the top 4 with score ≥ 5, rejects a playlist where under half
+the tracks are normal length (mostly "extended" loops), and **prefers English track names**: a playlist
+whose titles are ≥ 30% Japanese/Chinese/Korean script (`foreignTitleRatio`) is only used if no English
+one passes. Requests use `hl=en`, so uploader-provided English title translations come through.
+`preferEnglishSource` re-checks library games (> 50% foreign titles) and swaps the source; exposed
+as a Library button and `import-headless --fix-foreign`. Fallback: a full-soundtrack *video* with a
 timestamped tracklist. Personal games with `sources` skip all of this.
 
 ## Cleaning titles: `parse.ts`

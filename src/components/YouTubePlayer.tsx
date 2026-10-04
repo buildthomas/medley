@@ -21,6 +21,7 @@ function loadIframeApi(): Promise<void> {
 export interface PlayerHandle {
   toggle(): void;
   play(): void;
+  pause(): void;
   elapsed(): number;
   /** Jump to a position, in seconds from the start of the track. */
   seek(elapsed: number): void;
@@ -71,6 +72,9 @@ export function YouTubePlayer({ track, ref, resumeAt, cueOnly, volume, muted, ..
     },
     play() {
       if (playerRef.current && readyRef.current) playerRef.current.playVideo();
+    },
+    pause() {
+      if (playerRef.current && readyRef.current) playerRef.current.pauseVideo();
     },
     seek(elapsed: number) {
       const p = playerRef.current;

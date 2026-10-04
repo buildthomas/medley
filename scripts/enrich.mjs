@@ -8,6 +8,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { wikiCovers } from './wiki-covers.mjs';
 
 const ENDPOINT = 'https://query.wikidata.org/sparql';
 const UA = 'vgm-shuffle/0.3 (personal hobby project; catalog build)';
@@ -45,6 +46,9 @@ const LINK_PROPS = {
   P5944: ['PlayStation Store', (v) => `https://store.playstation.com/en-us/product/${v}`],
   P7294: ['itch.io', (v) => v],
 };
+
+const LINK_ORDER = ['Roblox', 'Steam', 'GOG', 'Epic Games', 'Nintendo eShop', 'PlayStation Store', 'itch.io', 'Wikipedia'];
+export const linkRank = (label) => (LINK_ORDER.includes(label) ? LINK_ORDER.indexOf(label) : LINK_ORDER.length - 1);
 
 // Shorter, familiar platform names.
 const PLATFORM_NAMES = {
@@ -142,37 +146,11 @@ export async function enrichGames(games, { log = console.log, cacheFile } = {}) 
 
   // 3. Covers: Steam portrait art first, Wikipedia infobox image as fallback -----------------
   log('Covers…');
-  const withWiki = games.filter((g) => g.wiki);
-  for (let i = 0; i < withWiki.length; i += 50) {
-    const batch = withWiki.slice(i, i + 50);
-    const params = new URLSearchParams({
-      action: 'query',
-      format: 'json',
-      prop: 'pageimages',
-      piprop: 'thumbnail',
-      pithumbsize: '400',
-      pilicense: 'any',
-      redirects: '1',
-      titles: batch.map((g) => g.wiki).join('|'),
-    });
-    const res = await fetch(`https://en.wikipedia.org/w/api.php?${params}`, { headers: { 'User-Agent': UA } });
-    if (!res.ok) continue;
-    const q = (await res.json()).query ?? {};
-    const alias = new Map();
-    for (const n of [...(q.normalized ?? []), ...(q.redirects ?? [])]) alias.set(n.to, n.from);
-    const thumbByTitle = new Map();
-    for (const p of Object.values(q.pages ?? {})) {
-      if (!p.thumbnail) continue;
-      const url = p.thumbnail.source.replace(/\?.*$/, '');
-      let t = p.title;
-      thumbByTitle.set(t, url);
-      while (alias.has(t)) thumbByTitle.set((t = alias.get(t)), url);
-    }
-    for (const g of batch) {
-      const url = thumbByTitle.get(g.wiki);
-      if (url) g.wikiCover = url;
-    }
-  }
+  const thumbByTitle = await wikiCovers(
+    games.filter((g) => g.wiki).map((g) => g.wiki),
+    { log },
+  );
+  for (const g of games) if (g.wiki && thumbByTitle.has(g.wiki)) g.wikiCover = thumbByTitle.get(g.wiki);
   for (const g of games) {
     const covers = [];
     if (g.steam) covers.push(`https://cdn.cloudflare.steamstatic.com/steam/apps/${g.steam}/library_600x900.jpg`);
@@ -227,6 +205,9 @@ export async function enrichGames(games, { log = console.log, cacheFile } = {}) 
     writeFileSync(cacheFile, JSON.stringify(cache));
   }
   for (const g of steamGames) if (cache[g.steam]?.length) g.keywords = cache[g.steam];
+
+  // Most useful link first: the player and Library show only the first one.
+  for (const g of games) g.links.sort((a, b) => linkRank(a.label) - linkRank(b.label));
 
   // Drop empty containers to keep the JSON small.
   for (const g of games) {

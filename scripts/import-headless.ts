@@ -5,7 +5,7 @@
 // Needs the dev server running (npm run dev) for YouTube access.
 //
 //   npx tsx scripts/import-headless.ts [--groups mine,nintendo,years,indie] [--starter]
-//                                      [--out vgm-library.json] [--concurrency 6] [--retry-failed]
+//                                      [--out vgm-library.json] [--concurrency 6] [--retry-failed] [--fix-foreign]
 //
 // Re-running with the same --out resumes: games already in the file are skipped.
 
@@ -24,7 +24,7 @@ const CONCURRENCY = Number(opt('concurrency', '6'));
 
 const { db, exportLibrary, importLibrary, setMeta, getMeta } = await import('../src/db.ts');
 const { loadCatalog } = await import('../src/lib/catalog.ts');
-const { autoAddGame } = await import('../src/lib/importer.ts');
+const { autoAddGame, foreignTitleRatio, preferEnglishSource } = await import('../src/lib/importer.ts');
 const { starterGames } = await import('../src/lib/starter.ts');
 type CatalogGame = import('../src/types.ts').CatalogGame;
 
@@ -78,6 +78,21 @@ async function worker() {
   }
 }
 await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+// --fix-foreign: swap sources whose track names are mostly Japanese/Chinese/Korean for English ones.
+if (args.includes('--fix-foreign')) {
+  for (const g of await db.games.toArray()) {
+    const titles = (await db.tracks.where('gameId').equals(g.id).toArray()).map((t) => t.title);
+    if (foreignTitleRatio(titles) <= 0.5) continue;
+    const meta = byId.get(g.id) ?? { ...g, franchise: g.franchise ?? undefined, pop: 0 };
+    try {
+      const used = await preferEnglishSource(meta);
+      console.log(`${g.title}: ${used ? `switched to “${used}”` : 'no English source found'}`);
+    } catch (e) {
+      console.log(`${g.title}: ${(e as Error).message}`);
+    }
+  }
+}
 
 // Same bookkeeping the app's "Add all" + start-up jobs keep, so the monthly
 // update continues from here after the backup is restored.
