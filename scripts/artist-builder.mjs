@@ -2,7 +2,7 @@
 // Wikidata, ranked by Wikipedia coverage and grouped into broad genres. Anyone not in here
 // is found on the fly (MusicBrainz search, see server/artists.ts).
 
-import { bucket, commonsThumb, datePart, inBatches, label, qid, sparql, values } from './wd.mjs';
+import { bucket, commonsCredits, commonsFileName, commonsThumb, datePart, inBatches, label, qid, sparql, values } from './wd.mjs';
 import { wikiCovers } from './wiki-covers.mjs';
 
 const MIN_LINKS = 45;
@@ -151,6 +151,15 @@ export async function buildArtists({ log = console.log } = {}) {
       };
     })
     .sort((a, b) => b.pop - a.pop);
+
+  // Free Commons photos usually require crediting the photographer and license.
+  const photoFiles = new Map(items.filter((i) => i.covers?.[0]?.includes('commons.wikimedia.org')).map((i) => [i.id, commonsFileName(i.covers[0])]));
+  log(`Photo credits for ${photoFiles.size} Commons photos…`);
+  const credits = await commonsCredits([...photoFiles.values()], { log });
+  for (const item of items) {
+    const credit = credits.get(photoFiles.get(item.id));
+    if (credit) item.coverCredit = credit;
+  }
 
   const top = (pred, n) => items.filter(pred).slice(0, n).map((i) => i.id);
   // Genre lists favour artists for whom the genre is a big part of their profile, so a pop

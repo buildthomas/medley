@@ -28,6 +28,8 @@ export interface CatalogGame {
   artist?: { country?: string; since?: number; type?: 'person' | 'group' };
   /** Artists: their official YouTube channel id (helps recognise their uploads). */
   ytChannel?: string;
+  /** Credit for a freely licensed cover photo (Wikimedia Commons): shown on the detail page. */
+  coverCredit?: { author?: string; license?: string; licenseUrl?: string; source: string };
 }
 
 export interface AnimeTheme {

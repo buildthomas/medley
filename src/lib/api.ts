@@ -40,7 +40,12 @@ async function get<T>(path: string): Promise<T> {
   try {
     res = await fetch(apiUrl(path));
   } catch {
-    throw new Error('Could not reach the local server. Is `npm run dev` running?');
+    throw new Error('Could not reach the Medley server. Is `npm run dev` running?');
+  }
+  // Signed out (hosted Medley, expired session): reload to show the sign-in screen.
+  if (res.status === 401 && typeof location !== 'undefined') {
+    location.reload();
+    throw new Error('Signed out');
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error ?? `Request failed (${res.status})`);

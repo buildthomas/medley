@@ -40,7 +40,9 @@ function remember(url: string, b: Backdrop) {
 }
 
 /** Only formats that can be transparent are worth sampling. */
-const mayBeTransparent = (url: string) => /\.(png|gif|webp|svg)(\?|$)|rbxcdn\.com/i.test(url);
+// Commons' Special:FilePath redirect doesn't allow cross-origin reads (and those are artist photos,
+// not logos), so they're never analysed.
+const mayBeTransparent = (url: string) => /\.(png|gif|webp|svg)(\?|$)|rbxcdn\.com/i.test(url) && !url.includes('/Special:FilePath/');
 
 function analyseBackdrop(url: string): Promise<Backdrop> {
   const known = storedBackdrops()[url];

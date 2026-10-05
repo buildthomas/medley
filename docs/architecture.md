@@ -20,9 +20,15 @@ Wikidata SPARQL (Steam id lookups) ◀── direct   ├─ steam.ts    optiona
 ```
 
 The routes live in `server/api.ts`. In development `server/plugin.ts` mounts them in Vite; in
-production `server/serve.ts` serves `dist/` plus the same API from one Node process (compression,
-optional password, rate limit, weekly refresh scheduler). Data and config directories are
-outside the repo (`scripts/paths.mjs`). See [hosting.md](hosting.md).
+production `server/serve.ts` serves `dist/` plus the same API (compression, invite-only sign-in
+from `server/auth.ts`, rate limit, a disk cache for YouTube answers). The catalog refresh
+(`scripts/refresh.mjs`) runs in the web process, in `server/worker.ts`, or from cron; processes
+coordinate through files in the data dir. Data and config directories are outside the repo
+(`scripts/paths.mjs`). See [hosting.md](hosting.md).
+
+Start-up in the browser (`src/main.tsx`): copy a library from old storage names / the old :5173
+address (`migrate.ts`, `lib/originTransfer.ts`) → ask the server whether sign-in is needed
+(`lib/auth.ts`, shows `SignIn`) → load `App`.
 
 `scripts/import-headless.ts` is a third mode: it runs the client's import code in Node against an
 in-memory IndexedDB (`fake-indexeddb`) and the running dev server, then writes a backup file.

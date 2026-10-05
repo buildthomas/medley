@@ -50,6 +50,69 @@ export const commonsThumb = (fileUrlOrName) =>
     decodeURIComponent(String(fileUrlOrName).split('/').pop()),
   )}?width=400`;
 
+/** "https://…/Special:FilePath/Taylor%20Swift.jpg?width=400" or a Commons URL → "Taylor Swift.jpg". */
+export const commonsFileName = (fileUrlOrName) =>
+  decodeURIComponent(String(fileUrlOrName).split('?')[0].split('/').pop()).replace(/_/g, ' ');
+
+const stripHtml = (s) =>
+  String(s ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Photographer and license for Commons files (free licenses usually require crediting both).
+ * @param {string[]} files file names ("Taylor Swift.jpg")
+ * @returns {Promise<Map<string, { author?: string, license?: string, licenseUrl?: string, source: string }>>}
+ */
+export async function commonsCredits(files, { log } = {}) {
+  const out = new Map();
+  const unique = [...new Set(files)];
+  for (let i = 0; i < unique.length; i += 50) {
+    const batch = unique.slice(i, i + 50);
+    const url = new URL('https://commons.wikimedia.org/w/api.php');
+    url.search = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      formatversion: '2',
+      prop: 'imageinfo',
+      iiprop: 'extmetadata',
+      iiextmetadatafilter: 'Artist|LicenseShortName|LicenseUrl',
+      titles: batch.map((f) => `File:${f}`).join('|'),
+    }).toString();
+    let json = null;
+    for (let attempt = 0; attempt < 5 && !json; attempt++) {
+      const res = await fetch(url, { headers: { 'User-Agent': UA } }).catch(() => null);
+      if (res?.ok) json = await res.json().catch(() => null);
+      else await sleep(2000 * (attempt + 1));
+    }
+    if (!json) {
+      log?.(`  Commons credits: batch ${i / 50 + 1} failed, skipping`);
+      continue;
+    }
+    // Commons normalises titles ("File:Taylor_swift.jpg" → "File:Taylor swift.jpg").
+    const normalized = new Map((json.query?.normalized ?? []).map((n) => [n.to, n.from]));
+    for (const page of json.query?.pages ?? []) {
+      const meta = page.imageinfo?.[0]?.extmetadata;
+      if (!meta) continue;
+      const title = normalized.get(page.title) ?? page.title;
+      const name = title.replace(/^File:/, '');
+      out.set(name, {
+        ...(meta.Artist?.value ? { author: stripHtml(meta.Artist.value).slice(0, 120) } : {}),
+        ...(meta.LicenseShortName?.value ? { license: stripHtml(meta.LicenseShortName.value) } : {}),
+        ...(meta.LicenseUrl?.value ? { licenseUrl: meta.LicenseUrl.value } : {}),
+        source: `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`,
+      });
+    }
+    await sleep(300);
+  }
+  return out;
+}
+
 /** Fold granular labels into buckets: [[name, regex], …] applied to lower-cased labels. */
 export function bucket(labels, buckets) {
   const out = new Set();

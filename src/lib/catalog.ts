@@ -24,7 +24,8 @@ export interface Collections {
 async function fetchJson<T>(path: string): Promise<T | null> {
   try {
     const res = await fetch(apiUrl(path));
-    return res.ok ? ((await res.json()) as T) : null;
+    // 204: the server has no refreshed copy (yet); use the bundled one.
+    return res.ok && res.status !== 204 ? ((await res.json()) as T) : null;
   } catch {
     return null;
   }

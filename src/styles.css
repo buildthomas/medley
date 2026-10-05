@@ -235,12 +235,22 @@ kbd {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
-.brand {
+button.brand {
   font-weight: 700;
   font-size: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+button.brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
 .wordmark {
   font-size: 19px;
@@ -485,13 +495,14 @@ button.now-cover-btn:focus-visible {
   color: var(--text);
 }
 
-/* Mini player, docked while browsing other tabs (player stays mounted). */
+/* Mini player, docked while browsing other tabs (player stays mounted). YouTube requires the
+   embedded player to be at least 200×200 CSS px: 376 − 2×10 padding = 356 wide → 200 tall. */
 .listen-layout.compact {
   position: fixed;
   right: 16px;
   bottom: 16px;
   z-index: 30;
-  width: 340px;
+  width: 376px;
   display: block;
   background: var(--bg-raised);
   border: 1px solid var(--line);
@@ -507,6 +518,10 @@ button.now-cover-btn:focus-visible {
 }
 .compact .stage {
   gap: 8px;
+}
+.compact .video-frame {
+  min-width: 200px;
+  min-height: 200px;
 }
 .compact .now-title {
   font-size: 15px;
@@ -874,7 +889,7 @@ tr.excluded {
     flex-wrap: wrap;
   }
   main {
-    padding: 16px 16px 200px;
+    padding: 16px 16px 400px; /* room for the docked player */
   }
   .side-lists {
     grid-template-columns: 1fr;
@@ -890,8 +905,16 @@ tr.excluded {
     right: 16px;
     width: auto;
   }
+  /* Phones: one row of controls (hardware buttons do volume), no second cover next to the video. */
+  .compact .volume,
+  .compact .now-cover {
+    display: none;
+  }
+  /* Phones: full width, never shorter than YouTube's 200px minimum. */
   .compact .video-frame {
-    width: 200px;
+    width: 100%;
+    aspect-ratio: auto;
+    height: max(200px, calc((100vw - 52px) * 9 / 16));
   }
   td.types {
     display: none;
@@ -1124,13 +1147,19 @@ code {
 .pip-body-root {
   margin: 0;
   overflow: hidden;
+  /* If the window gets resized anyway, the card stays its own size in the middle. */
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  background: var(--bg);
 }
 .pip {
   display: grid;
   grid-template-columns: 82px minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
-  height: 100vh;
+  width: 360px;
+  height: 132px;
   box-sizing: border-box;
   align-items: center;
   background:
@@ -1184,21 +1213,59 @@ code {
 .pip-controls {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .pip-controls button {
-  padding: 3px 8px;
-  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 9px;
+  line-height: 0;
+}
+.pip-controls button.liked {
+  color: var(--brand-2);
 }
 .pip-controls .pip-play {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: var(--accent);
-  width: 34px;
+  width: 38px;
 }
 .pip-time {
   margin-left: auto;
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- sign-in (hosted, invite-only) ---------- */
+.signin {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(80% 60% at 50% 0%, var(--accent-soft), transparent 70%), var(--bg);
+}
+.signin-card {
+  width: min(360px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.signin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.signin-brand .wordmark {
+  font-size: 26px;
+}
+.signin-card input {
+  padding: 10px 12px;
 }

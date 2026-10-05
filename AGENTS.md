@@ -27,14 +27,14 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
 
 | Path | What lives there |
 |---|---|
-| `src/` | React 19 + TypeScript client. Entry `main.tsx` → `App.tsx` (tabs: Listen, Library, Discover, Add link) |
+| `src/` | React 19 + TypeScript client. Entry `main.tsx` (storage migrations, sign-in) → `App.tsx` (tabs: Discover, Listen, Library, Add link) |
 | `src/lib/` | Logic without UI: shuffle (`picker.ts`), importing (`importer.ts`, `importers/anime.ts`, `importers/artist.ts`, `parse.ts`), catalog (`catalog.ts`), search, background jobs (`bulk.ts`, `updater.ts`, `sync.ts`) |
 | `src/components/` | Views; `discover/` holds the cover-art browsing UI |
 | `src/data/` | **Generated, committed** public catalogs (`catalog.json` games, `screen.json`, `anime.json`, `artists.json`, `collections.json`). Rebuilt by `npm run catalog` |
-| `server/` | `/api/*` (`api.ts`: YouTube scraping, Steam, MusicBrainz, catalog refresh, personal games), mounted by `plugin.ts` in dev and `serve.ts` in production |
-| `scripts/` | One builder per domain (`catalog-`, `screen-`, `anime-`, `artist-builder.mjs`, combined by `build-all.mjs`), shared Wikidata helpers (`wd.mjs`), enrichment, headless bulk importer |
-| `config/` | Only `my-games.example.json`. Real personal config lives **outside the repo** (`scripts/paths.mjs`) |
-| `Dockerfile` | Production image (`server/serve.ts`); see [docs/hosting.md](docs/hosting.md) |
+| `server/` | `/api/*` (`api.ts`: YouTube scraping + disk cache, Steam, MusicBrainz, refresh status, personal games; `auth.ts`: invite-only sign-in), mounted by `plugin.ts` in dev and `serve.ts` in production; `worker.ts` background refreshes |
+| `scripts/` | `refresh.mjs` (the catalog refresh job), `paths.mjs` (data/config dirs), one builder per domain (`catalog-`, `screen-`, `anime-`, `artist-builder.mjs`, combined by `build-all.mjs`), shared Wikidata helpers (`wd.mjs`), enrichment, headless bulk importer |
+| `config/` | Only templates (`my-games.example.json`, `invites.example.json`). Real personal config lives **outside the repo** (`scripts/paths.mjs`) |
+| `Dockerfile`, `docker-compose.yml` | Production image; web + worker sharing a data volume. See [docs/hosting.md](docs/hosting.md) |
 | `docs/` | Everything else you need to know |
 
 ## Rules that matter

@@ -11,7 +11,7 @@
 //
 // Older checkouts kept these in ./data and ./config inside the repo; they're moved on first use.
 
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,6 +54,24 @@ export function medleyPaths({ log } = {}) {
   migrate(join(ROOT, 'config'), configDir, (name) => !name.endsWith('.example.json'), log);
   resolved = { dataDir, configDir };
   return resolved;
+}
+
+/**
+ * Settings for the production server and worker, without overriding real environment variables:
+ * `.env.local` in the repo (local convenience, gitignored), then `medley.env` in the config dir
+ * (hosting: keeps secrets out of the code directory). Lines are KEY=value; # starts a comment.
+ */
+export function loadEnvFiles() {
+  const load = (file) => {
+    if (!existsSync(file)) return;
+    for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+      const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+      if (!m || process.env[m[1]] !== undefined) continue;
+      process.env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+    }
+  };
+  load(join(ROOT, '.env.local'));
+  load(join(process.env.MEDLEY_CONFIG_DIR || defaults().config, 'medley.env'));
 }
 
 function migrate(from, to, keep, log) {

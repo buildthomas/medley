@@ -11,6 +11,9 @@ repo (`scripts/paths.mjs`); the user's library is in the browser and moves via b
 | `npm run dev` | App + API on http://localhost:32123 (the logo: bars 3-2-1-2-3) |
 | `npm run build` | Typecheck + production build to `dist/` |
 | `npm run serve` | Production server (`server/serve.ts`: `dist/` + API) on :32123. `npm start` = build + serve |
+| `npm run worker` | Background worker for hosting with separate processes (`server/worker.ts`) |
+| `npm run refresh` | One catalog refresh if they're a week old (`--force` always); for cron |
+| `npm run icons` | Regenerate the PNG app icons in `public/` from the logo geometry |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run catalog` | Rebuild all `src/data/*.json` (≈30–40 min; +≈30 min the first time for Steam keywords) |
 | `npm run catalog -- --only anime,artists` | Rebuild some domains (`games`, `screen`, `anime`, `artists`); other domains' collections are kept |
@@ -24,7 +27,7 @@ repo (`scripts/paths.mjs`); the user's library is in the browser and moves via b
 | What | Where (Windows · macOS · Linux) | Override |
 |---|---|---|
 | Refreshed catalogs, caches, headless-import output | `%LOCALAPPDATA%\Medley\data` · `~/Library/Application Support/Medley/data` · `~/.local/share/medley` | `MEDLEY_DATA_DIR` |
-| `my-games.json` (your own games) | `%APPDATA%\Medley` · `~/Library/Application Support/Medley/config` · `~/.config/medley` | `MEDLEY_CONFIG_DIR` |
+| `my-games.json`, `invites.json`, `medley.env` (hosting settings) | `%APPDATA%\Medley` · `~/Library/Application Support/Medley/config` · `~/.config/medley` | `MEDLEY_CONFIG_DIR` |
 | Your library | The browser's IndexedDB (per browser, per site address) | Backup / Restore |
 | Secrets for dev | `.env.local` in the repo (gitignored): optional `STEAM_API_KEY` | Env vars when hosted |
 

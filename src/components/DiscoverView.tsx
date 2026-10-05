@@ -445,13 +445,7 @@ export function DiscoverView({ session }: { session: Session }) {
   return (
     <div className="discover2">
       <section className="discover-hero">
-        <p className="eyebrow">Games · anime · film & TV · artists</p>
-        <h1>
-          Every story has <span className="dim">a sound.</span>
-        </h1>
-        <p className="muted">
-          {allGames.length.toLocaleString()} titles · {libraryIds.size.toLocaleString()} in your library
-        </p>
+        <div className="discover-top">
         <div className="domain-tabs" role="tablist">
           {DOMAINS.map((d) => (
             <button key={d.id} role="tab" aria-selected={domain === d.id} className={domain === d.id ? 'active' : ''} onClick={() => setDomain(d.id)}>
@@ -475,6 +469,7 @@ export function DiscoverView({ session }: { session: Session }) {
             if (e.target.value && mode === 'home') setMode('browse');
           }}
         />
+        </div>
         <div className="mode-tabs">
           {(
             [
@@ -491,6 +486,9 @@ export function DiscoverView({ session }: { session: Session }) {
             <input type="checkbox" checked={showUpcoming} onChange={(e) => setShowUpcoming(e.target.checked)} /> Show unreleased
           </label>
           <span className="spacer" />
+          <span className="muted small">
+            {games.length.toLocaleString()} titles · {libraryIds.size.toLocaleString()} in your library
+          </span>
           {domain === 'game' && starterMissing.length > 0 && (
             <button className="primary" onClick={() => addAll('Starter pack', starter)}>
               ✨ Starter pack ({starterMissing.length})

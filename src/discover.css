@@ -7,20 +7,17 @@
 .discover-hero {
   display: grid;
   gap: 10px;
-  padding: 28px 0 4px;
+  padding: 18px 0 0;
 }
-.discover-hero h1 {
-  margin: 0;
-  font-size: clamp(32px, 5vw, 56px);
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-  font-weight: 800;
+/* Domain tabs and search share a row on wide screens. */
+.discover-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
 }
-.discover-hero .dim {
-  background: var(--brand-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.discover-top .search.big {
+  flex: 1 1 320px;
 }
 .eyebrow {
   margin: 0;
@@ -437,6 +434,28 @@ button.eyebrow {
 .detail-cover {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
 }
+.detail-figure {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+}
+.cover-credit {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.cover-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent);
+  text-underline-offset: 2px;
+}
+.cover-credit a:hover {
+  color: var(--text);
+}
 .detail-info {
   display: grid;
   align-content: start;
@@ -568,7 +587,8 @@ button.inline-link {
     grid-template-columns: 1fr;
     padding: 20px;
   }
-  .detail-cover {
+  .detail-cover,
+  .detail-figure {
     width: 160px;
   }
   .detail-body {
@@ -659,7 +679,6 @@ button.inline-link {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 4px;
 }
 .domain-tabs button {
   border-radius: 999px;

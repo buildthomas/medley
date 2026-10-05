@@ -2,26 +2,27 @@
 //
 //   npm run build && npm run serve        (Node ≥ 22.18 runs this TypeScript file directly)
 //
-// Environment:
-//   PORT                 default 32123 (the logo's bar heights; same as `npm run dev`)
-//   HOST                 default 0.0.0.0
-//   MEDLEY_DATA_DIR      refreshed catalogs & caches (see scripts/paths.mjs for defaults)
-//   MEDLEY_CONFIG_DIR    my-games.json
-//   MEDLEY_PASSWORD      if set, the site asks for it (HTTP basic auth; any user name)
-//   MEDLEY_ADMIN_TOKEN   lets `POST /api/refresh?force=1` with `Authorization: Bearer …` force a rebuild
-//   MEDLEY_RATE_LIMIT    YouTube/MusicBrainz API requests per minute per IP (default 600; 0 = off)
-//   STEAM_API_KEY        optional, for loading a Steam library by profile URL
-//
-// The catalogs refresh themselves weekly (createApi().startScheduler). See docs/hosting.md.
+// Environment (see docs/hosting.md):
+//   PORT, HOST              default 32123 (the logo's bar heights; same as `npm run dev`), 0.0.0.0
+//   MEDLEY_ROLE             all (default): also runs the weekly catalog refresh in this process
+//                           web: leave refreshes to `npm run worker` / a cron job sharing the data dir
+//   MEDLEY_DATA_DIR         refreshed catalogs, caches, sign-in secret (scripts/paths.mjs)
+//   MEDLEY_CONFIG_DIR       my-games.json, invites.json
+//   MEDLEY_PASSWORD         a shared invite code (in addition to invites.json); sign-in is off
+//                           unless one of the two is set
+//   MEDLEY_SECRET           signs session cookies (default: a random secret kept in the data dir)
+//   MEDLEY_TRUST_PROXY      1 behind a reverse proxy (X-Forwarded-For/-Proto)
+//   MEDLEY_RATE_LIMIT       YouTube/MusicBrainz API calls per minute per IP (default 600; 0 = off)
+//   STEAM_API_KEY           optional, for loading a Steam library by profile URL
 
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
-import { medleyPaths, ROOT } from '../scripts/paths.mjs';
+import { loadEnvFiles, medleyPaths, ROOT } from '../scripts/paths.mjs';
 import { createApi } from './api.ts';
 
+loadEnvFiles();
 const env = process.env;
 const log = (m: string) => console.log(`[medley] ${m}`);
 const { dataDir, configDir } = medleyPaths({ log });
@@ -30,27 +31,19 @@ if (!existsSync(join(DIST, 'index.html'))) {
   console.error('No build found. Run `npm run build` first.');
   process.exit(1);
 }
+const role = env.MEDLEY_ROLE === 'web' ? 'web' : 'all';
 
 const api = createApi({
   dataDir,
   configDir,
   steamKey: env.STEAM_API_KEY,
-  adminToken: env.MEDLEY_ADMIN_TOKEN,
+  refresh: role === 'all' ? 'inline' : 'worker',
+  auth: { password: env.MEDLEY_PASSWORD || undefined, secret: env.MEDLEY_SECRET || undefined },
+  trustProxy: env.MEDLEY_TRUST_PROXY === '1',
   rateLimit: env.MEDLEY_RATE_LIMIT ? Number(env.MEDLEY_RATE_LIMIT) : 600,
   log,
 });
-api.startScheduler();
-
-// ---- optional password ---------------------------------------------------------------------
-const digest = (s: string) => createHash('sha256').update(s).digest();
-const passwordHash = env.MEDLEY_PASSWORD ? digest(env.MEDLEY_PASSWORD) : null;
-function authorized(req: IncomingMessage) {
-  if (!passwordHash) return true;
-  const [scheme, value] = (req.headers.authorization ?? '').split(' ');
-  if (scheme !== 'Basic' || !value) return false;
-  const password = Buffer.from(value, 'base64').toString('utf8').split(':').slice(1).join(':');
-  return timingSafeEqual(digest(password), passwordHash);
-}
+if (role === 'all') api.startScheduler();
 
 // ---- static files (precompressed in memory on first request) -------------------------------
 const TYPES: Record<string, string> = {
@@ -129,17 +122,21 @@ const server = createServer((req, res) => {
   const path = (req.url ?? '/').split('?')[0];
   if (path === '/healthz') {
     res.setHeader('Content-Type', 'application/json');
-    return res.end(JSON.stringify({ ok: true, catalogs: api.refreshStatus().generatedAt }));
+    return res.end(JSON.stringify({ ok: true, role, catalogs: api.refreshStatus().generatedAt }));
   }
-  if (!authorized(req)) {
-    res.statusCode = 401;
-    res.setHeader('WWW-Authenticate', 'Basic realm="Medley", charset="UTF-8"');
-    return res.end('Password required');
-  }
+  // /api/* checks sign-in itself (server/auth.ts); the page and assets are public code.
   api.handle(req, res, () => serveStatic(req, res));
 });
 
 const port = Number(env.PORT ?? 32123);
 server.listen(port, env.HOST ?? '0.0.0.0', () => {
-  log(`http://localhost:${port}  (data: ${dataDir}, config: ${configDir}${passwordHash ? ', password on' : ''})`);
+  log(`http://localhost:${port}  (role: ${role}, data: ${dataDir}, config: ${configDir})`);
 });
+
+// Containers stop with SIGTERM: finish open requests, then exit.
+for (const signal of ['SIGTERM', 'SIGINT'] as const)
+  process.once(signal, () => {
+    log(`${signal}: shutting down`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 10_000).unref();
+  });

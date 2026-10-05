@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteGame } from '../../db';
 import { franchiseOf } from '../../lib/catalog';
+import { coverCredit } from '../../lib/credits';
 import { autoAddGame, findCandidates, replaceSource, type Candidate } from '../../lib/importer';
 import { kindLabel, kindOf } from '../../lib/kinds';
 import { importAnime, useAnimeScope, type AnimeScope } from '../../lib/importers/anime';
@@ -64,6 +65,7 @@ export function GameDetail({
     [tracks],
   );
   const franchise = franchiseOf(game);
+  const credit = coverCredit(game);
   const kind = kindOf(game);
   const isArtist = kind === 'artist';
   const dev = game.tags?.developer?.slice(0, 2).join(', ');
@@ -130,7 +132,28 @@ export function GameDetail({
           ✕
         </button>
         <div className="detail-hero">
-          <Cover game={game} className="detail-cover" />
+          <figure className="detail-figure">
+            <Cover game={game} className="detail-cover" />
+            {credit && (
+              <figcaption className="cover-credit">
+                {credit.href ? (
+                  <a href={credit.href} target="_blank" rel="noreferrer">
+                    {credit.text}
+                  </a>
+                ) : (
+                  credit.text
+                )}
+                {credit.licenseHref && (
+                  <>
+                    {' '}
+                    <a href={credit.licenseHref} target="_blank" rel="noreferrer" title="License">
+                      ⓘ
+                    </a>
+                  </>
+                )}
+              </figcaption>
+            )}
+          </figure>
           <div className="detail-info">
             {franchise && (
               <button className="eyebrow link" onClick={() => onFacet('franchise', franchise)}>

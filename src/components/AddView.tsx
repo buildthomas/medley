@@ -9,6 +9,8 @@ import { AnimeListImport } from './AnimeListImport';
 import { SongImport } from './SongImport';
 import { SteamImport } from './SteamImport';
 import { formatTime } from './ui';
+import { formatBytes, useStorageStatus } from '../lib/storage';
+import { signOut, useAuth } from '../lib/auth';
 
 export function AddView() {
   const [input, setInput] = useState('');
@@ -199,6 +201,8 @@ export function AddView() {
                 onChange={(e) => e.target.files?.[0] && restore(e.target.files[0])}
               />
             </div>
+            <StorageLine />
+            <AccountLine />
           </section>
         </>
       )}
@@ -288,5 +292,39 @@ export function AddView() {
         </section>
       )}
     </div>
+  );
+}
+
+/** Whether the browser promised to keep the library, and how much space it takes. */
+function StorageLine() {
+  const st = useStorageStatus();
+  return (
+    <p className="small muted">
+      {st.persisted === true && '✓ Stored permanently: the browser won’t clear it to free up space. '}
+      {st.persisted === false && (
+        <>
+          The browser may clear this library if the disk runs low.{' '}
+          <button className="link inline-link" onClick={st.request}>
+            Keep it permanently
+          </button>{' '}
+          (installing Medley as an app makes browsers more likely to agree), and export a backup now and then.{' '}
+        </>
+      )}
+      {st.usage != null && `Using ${formatBytes(st.usage)}${st.quota ? ` of ${formatBytes(st.quota)} available` : ''}.`}
+    </p>
+  );
+}
+
+/** On a hosted Medley with sign-in: who you are, and signing out. */
+function AccountLine() {
+  const auth = useAuth();
+  if (!auth?.required || !auth.user) return null;
+  return (
+    <p className="small muted">
+      Signed in as {auth.user}.{' '}
+      <button className="link inline-link" onClick={signOut}>
+        Sign out
+      </button>
+    </p>
   );
 }

@@ -125,7 +125,22 @@ export function YouTubePlayer({ track, ref, resumeAt, cueOnly, volume, muted, ..
       playerRef.current = new YT.Player(el, {
         width: '100%',
         height: '100%',
-        playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+        // Our own controls replace YouTube's control bar (controls: 0); fullscreen, keyboard
+        // shortcuts, annotations and captions are off. The title bar and YouTube logo can't be
+        // hidden anymore (showinfo/modestbranding were retired). `origin` tells YouTube which
+        // site embeds it (it also checks the Referer, see Referrer-Policy in index.html).
+        playerVars: {
+          autoplay: 1,
+          playsinline: 1,
+          rel: 0,
+          controls: 0,
+          fs: 0,
+          disablekb: 1,
+          iv_load_policy: 3,
+          cc_load_policy: 0,
+          origin: location.origin,
+          widget_referrer: location.href,
+        } as YT.PlayerVars,
         events: {
           onReady: () => {
             readyRef.current = true;

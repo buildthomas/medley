@@ -7,7 +7,9 @@ import { BulkStatus } from './components/BulkStatus';
 import { Logo } from './components/Logo';
 import { NewArrivals } from './components/NewArrivals';
 import { ListenView } from './components/ListenView';
+import { db } from './db';
 import { loadFilters, saveFilters } from './lib/settings';
+import { requestPersistence } from './lib/storage';
 import { readUrlState, writeUrlState } from './lib/urlState';
 import { ensureMyGames, resumeInterrupted, runUpdate, syncLibraryMeta } from './lib/updater';
 import type { Filters } from './types';
@@ -15,20 +17,20 @@ import { useSession } from './useSession';
 
 type Tab = 'listen' | 'library' | 'discover' | 'add';
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'discover', label: 'Discover' },
   { id: 'listen', label: 'Listen' },
   { id: 'library', label: 'Library' },
-  { id: 'discover', label: 'Discover' },
   { id: 'add', label: 'Add link' },
 ];
 
 export function App() {
   const [tab, setTabState] = useState<Tab>(() => {
     const t = readUrlState().tab;
-    return TABS.some((x) => x.id === t) ? (t as Tab) : 'listen';
+    return TABS.some((x) => x.id === t) ? (t as Tab) : 'discover';
   });
   const setTab = (t: Tab) => {
     setTabState(t);
-    writeUrlState({ tab: t === 'listen' ? undefined : t });
+    writeUrlState({ tab: t });
   };
   const [filters, setFiltersState] = useState<Filters>(loadFilters);
   const session = useSession(filters);
@@ -42,6 +44,8 @@ export function App() {
   useEffect(() => {
     const timer = window.setTimeout(async () => {
       await syncLibraryMeta();
+      // Ask the browser to keep the library once there is one (see lib/storage.ts).
+      if (session.games.length || (await db.games.count())) void requestPersistence();
       await resumeInterrupted();
       await ensureMyGames();
       await runUpdate();
@@ -60,9 +64,9 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
+        <button className="brand" onClick={() => setTab('discover')} title="Discover">
           <Logo /> <span className="wordmark">medley</span>
-        </div>
+        </button>
         <nav>
           {TABS.map((t) => (
             <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>

@@ -64,8 +64,9 @@ subset). Expect ~30–40 minutes for everything, mostly Wikidata/Wikipedia pacin
 
 Shortly after the app starts it checks whether a week has passed since the last update. If so:
 
-1. **Catalogs:** the local server rebuilds all catalogs (`POST /api/refresh`) into `data/`. New
-   titles, release dates, covers and tags. The app prefers these over the bundled copy.
+1. **Catalogs:** the server rebuilds all catalogs into its data folder (in the background; a
+   hosted server does this on its own schedule). New titles, release dates, covers and tags. The
+   app prefers these over the bundled copy.
 2. **New titles** in collections you subscribed to (**Add all**, or **auto-add new**) are
    imported in the background.
 3. **Retries:** titles that found nothing before (e.g. unreleased at the time) are tried again
@@ -83,19 +84,25 @@ remaining queue is stored and resumes on the next start.
 
 ## Using it
 
+Tabs: **Discover** (the start page; the logo leads back to it), **Listen**, **Library**, **Add link**.
+
 - **Discover:** cover-art shelves per domain (*Everything, Games, Anime, Film & TV, Artists*),
   a filterable *Browse all* grid, and *Series & franchises*. Search covers the catalogs, your
   library's tracks (with *Play all*), and MusicBrainz artists. **+** adds a title; the title page
   has **▶ Play soundtrack** (in order), **⤮ Shuffle**, **Remove**, tags, store links, the
-  openings & endings list for anime, and per-track play buttons.
+  openings & endings list for anime, per-track play buttons, and where the cover image comes
+  from (with the photographer and license for Wikimedia photos).
 - **Listen:** collapsible filter sections: Mix (Variety, Familiarity), Music from, Length,
   Voice, Song type, Track types, Genres, Series, Platforms, Keywords, Era, Titles. Chips have
   three states: click once for "only these", twice for "never these". Jingles (< 30 s) are
-  excluded by default. Click the playing title or its cover to open its page. **⧉** pops the player out into a small always-on-top window (Chrome and
-  Edge).
+  excluded by default. Click the playing title or its cover to open its page. **⧉** pops the
+  player out into a small always-on-top window (Chrome and Edge).
 - **Library:** rename tracks, fix tags, like/ban tracks, remove titles.
 - **Add link:** paste YouTube playlists/videos, add a single song, import your Steam library,
-  back up or restore.
+  back up or restore, and see whether the browser keeps your library permanently.
+
+Medley can be installed as an app (Chrome/Edge: the install icon in the address bar). That
+also makes browsers more willing to keep its storage permanently.
 
 Keys: <kbd>Space</kbd> play/pause, <kbd>N</kbd>/<kbd>→</kbd> skip, <kbd>P</kbd>/<kbd>←</kbd> back,
 <kbd>L</kbd> like, <kbd>B</kbd> never play, <kbd>↑</kbd>/<kbd>↓</kbd> volume, <kbd>M</kbd> mute.
@@ -133,10 +140,11 @@ collection.
   `%LOCALAPPDATA%\Medley\data` (Windows), `~/Library/Application Support/Medley/data` (macOS),
   `~/.local/share/medley` (Linux). Your `my-games.json` goes in the config folder (`%APPDATA%\Medley`,
   `~/.config/medley`). Override them with `MEDLEY_DATA_DIR` and `MEDLEY_CONFIG_DIR`.
-- **Hosting:** `npm run build && npm run serve` (or the `Dockerfile`) runs the app and API in one
-  Node process, with compression, an optional password (`MEDLEY_PASSWORD`), rate limiting and
-  weekly catalog refreshes. See [docs/hosting.md](docs/hosting.md). GitHub Pages alone can't run
-  the API.
+- **Hosting:** `npm run build && npm run serve` runs the app and API in one Node process; for
+  separate web and background processes use `docker compose up` (web + `npm run worker`) or a
+  cron job running `npm run refresh`. Invite-only sign-in (`invites.json`), an optional CDN for
+  the static files, compression, rate limits and a shared YouTube cache are built in. Locally
+  nothing changes and nothing asks for a password. See [docs/hosting.md](docs/hosting.md).
 
 ## For contributors and AI agents
 

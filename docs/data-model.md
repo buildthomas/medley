@@ -37,6 +37,7 @@ artist country & years).
 | `themes` | Anime only: `{ type: 'OP'|'ED'|'IN', seq, song, artists[], episodes? }[]` from AnimeThemes |
 | `artist` | Artists only: `{ country, since, type: 'person'|'group' }` |
 | `ytChannel` | Artists only: official YouTube channel id (recognises official uploads) |
+| `coverCredit` | `{ author?, license?, licenseUrl?, source }` for a freely licensed Commons photo (artists), fetched at build time; shown under the cover |
 | `sources`, `roblox` | Personal games only: fixed YouTube links; Roblox ids for icon + link |
 
 Where it comes from: [data-pipeline.md](data-pipeline.md).

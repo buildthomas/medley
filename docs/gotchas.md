@@ -62,3 +62,16 @@
     from :5173 to :32123 is bridged by a one-time hand-over (`server/legacy-origin.ts`,
     `src/lib/originTransfer.ts`; same-site iframes aren't storage-partitioned). Don't change the port again
     without a similar bridge.
+26. **Docked YouTube player too small** → YouTube's player must be ≥ 200×200 CSS px; a 340 px dock
+    gave 320×180 (it looked like ~400×230 on a 125%-scaled screen: device pixels aren't CSS px).
+27. **Pop-out windows can't be made non-resizable** → no Document PiP option exists; we snap back
+    where allowed and keep the card fixed-size. The built-in browser pane can't open PiP windows
+    at all ("no window"); test in Chrome/Edge.
+28. **Hundreds of CORS errors from Commons photos** → `Special:FilePath` redirects without
+    `Access-Control-Allow-Origin`, so the transparent-logo analysis (canvas) fails. Photos are
+    never analysed (`Cover.tsx` `mayBeTransparent`).
+29. **A production server and the dev server both "on" 32123** → Node binding `0.0.0.0` and Vite on
+    `::1` don't conflict on Windows; `localhost` then reaches whichever matches. Use `PORT` when
+    testing `npm run serve` next to `npm run dev`.
+30. **Refresh stuck "running" after a crash** → the lock has a 30 s heartbeat and goes stale after
+    2 minutes; an interrupted run isn't backed off like a failure.

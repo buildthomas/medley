@@ -1,0 +1,34 @@
+# Medley with separate web and background-worker processes sharing one data volume.
+#   docker compose up -d --build
+# Put a reverse proxy with HTTPS in front of port 32123 (see docs/hosting.md), and add invite
+# codes to the config volume (config/invites.example.json) before sharing the address.
+#
+# Single process instead? Drop the worker service and remove MEDLEY_ROLE: the web process then
+# runs the weekly refresh itself.
+
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "32123:32123"
+    environment:
+      MEDLEY_ROLE: web
+      MEDLEY_TRUST_PROXY: "1"
+      # MEDLEY_PASSWORD: a-shared-invite-code     # optional, alongside config/invites.json
+      # MEDLEY_ASSET_URL is a build-time setting (see the Dockerfile)
+    volumes:
+      - medley-data:/data
+      - medley-config:/config
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["node", "server/worker.ts"]
+    volumes:
+      - medley-data:/data
+      - medley-config:/config
+
+volumes:
+  medley-data:
+  medley-config:

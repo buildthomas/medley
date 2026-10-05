@@ -31,6 +31,7 @@ interface RefreshStatus {
   startedAt?: number;
   error?: string;
   log: string[];
+  requested?: boolean;
 }
 
 async function refreshCall(method: 'GET' | 'POST', force = false): Promise<RefreshStatus | null> {
@@ -155,7 +156,8 @@ export async function runUpdate(force = false) {
     setStatus({ state: 'refreshing', message: 'Looking for new titles on Wikidata, Steam and AniList…' });
     let refresh = await refreshCall('POST', force);
     const startedWaiting = Date.now();
-    while (refresh?.state === 'running' && Date.now() - startedWaiting < 3 * 60 * 60 * 1000) {
+    // `requested`: a separate worker process was asked to refresh and hasn't started yet.
+    while ((refresh?.state === 'running' || refresh?.requested) && Date.now() - startedWaiting < 3 * 60 * 60 * 1000) {
       const minutes = Math.round((Date.now() - (refresh.startedAt ?? Date.now())) / 60000);
       setStatus({ message: `Rebuilding the catalogs (${minutes} min so far, usually ~30)… ${refresh.log.at(-1) ?? ''}` });
       await new Promise((r) => setTimeout(r, 15_000));

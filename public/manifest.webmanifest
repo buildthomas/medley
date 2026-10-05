@@ -1,0 +1,16 @@
+{
+  "name": "Medley",
+  "short_name": "Medley",
+  "description": "Your own music radio: game soundtracks, anime openings, film & TV songs and artists, with your own shuffle.",
+  "start_url": "./?tab=discover",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#100e16",
+  "theme_color": "#14111d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

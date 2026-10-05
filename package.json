@@ -7,10 +7,13 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "serve": "node server/serve.ts",
+    "worker": "node server/worker.ts",
+    "refresh": "node scripts/refresh.mjs",
     "start": "vite build && node server/serve.ts",
     "catalog": "node scripts/build-catalog.mjs",
     "typecheck": "tsc --noEmit",
-    "import-all": "tsx scripts/import-headless.ts --starter"
+    "import-all": "tsx scripts/import-headless.ts --starter",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "dexie": "^4.4.6",

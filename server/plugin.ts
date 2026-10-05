@@ -15,7 +15,8 @@ export function medleyApi(): Plugin {
       const env = loadEnv(config.mode, config.root, '');
       const { dataDir, configDir } = medleyPaths({ log });
       log(`data: ${dataDir} · config: ${configDir}`);
-      handle = createApi({ dataDir, configDir, steamKey: env.STEAM_API_KEY || process.env.STEAM_API_KEY }).handle;
+      // Locally: no sign-in, refreshes run in this process.
+      handle = createApi({ dataDir, configDir, steamKey: env.STEAM_API_KEY || process.env.STEAM_API_KEY, auth: false, refresh: 'inline' }).handle;
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => handle(req, res, next));

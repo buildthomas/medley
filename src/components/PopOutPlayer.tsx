@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { HeartIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon } from './icons';
 import { formatTime } from './ui';
 
 interface PipWindowApi {
@@ -52,13 +53,17 @@ function MiniPlayer({ state, actions }: { state: PopOutState; actions: PopOutAct
           <div style={{ width: `${pct}%` }} />
         </div>
         <div className="pip-controls">
-          <button onClick={actions.prev} title="Previous">⏮</button>
-          <button className="pip-play" onClick={actions.toggle} title="Play/pause">
-            {state.playing ? '❚❚' : '▶'}
+          <button onClick={actions.prev} title="Previous" aria-label="Previous">
+            <PrevIcon size={15} />
           </button>
-          <button onClick={actions.next} title="Next">⏭</button>
-          <button className={state.liked ? 'liked' : ''} onClick={actions.like} title="Like">
-            {state.liked ? '♥' : '♡'}
+          <button className="pip-play" onClick={actions.toggle} title="Play/pause" aria-label={state.playing ? 'Pause' : 'Play'}>
+            {state.playing ? <PauseIcon size={15} /> : <PlayIcon size={15} />}
+          </button>
+          <button onClick={actions.next} title="Next" aria-label="Next">
+            <NextIcon size={15} />
+          </button>
+          <button className={state.liked ? 'liked' : ''} onClick={actions.like} title="Like" aria-label="Like">
+            <HeartIcon size={14} filled={state.liked} />
           </button>
           <span className="pip-time">
             {formatTime(state.elapsed)} / {formatTime(state.length)}
@@ -67,6 +72,29 @@ function MiniPlayer({ state, actions }: { state: PopOutState; actions: PopOutAct
       </div>
     </div>
   );
+}
+
+const WIDTH = 360;
+const HEIGHT = 132;
+
+/**
+ * Browsers always let people resize a Picture-in-Picture window (there's no option to turn it
+ * off). We snap it back to its size where the browser allows that, and otherwise the card keeps
+ * its fixed size, centred (styles.css .pip).
+ */
+function keepSize(win: Window) {
+  let timer = 0;
+  win.addEventListener('resize', () => {
+    win.clearTimeout(timer);
+    timer = win.setTimeout(() => {
+      if (win.innerWidth === WIDTH && win.innerHeight === HEIGHT) return;
+      try {
+        win.resizeTo(WIDTH + (win.outerWidth - win.innerWidth), HEIGHT + (win.outerHeight - win.innerHeight));
+      } catch {
+        /* not allowed without a user gesture in some browsers */
+      }
+    }, 150);
+  });
 }
 
 /** Copies the app's stylesheets (and theme) into the pop-out window. */
@@ -95,7 +123,14 @@ export function usePopOut(state: PopOutState, actions: PopOutActions) {
       winRef.current.close();
       return;
     }
-    const win = await window.documentPictureInPicture.requestWindow({ width: 360, height: 132 });
+    let win: Window;
+    try {
+      win = await window.documentPictureInPicture.requestWindow({ width: WIDTH, height: HEIGHT });
+    } catch (e) {
+      // e.g. embedded browsers that can't open windows; nothing to do but not crash.
+      console.warn('Pop-out window not available here:', e);
+      return;
+    }
     copyStyles(win.document);
     win.document.title = 'Now playing';
     win.document.body.className = 'pip-body-root';
@@ -104,6 +139,7 @@ export function usePopOut(state: PopOutState, actions: PopOutActions) {
     rootRef.current = createRoot(container);
     winRef.current = win;
     setOpen(true);
+    keepSize(win);
     win.addEventListener('pagehide', () => {
       rootRef.current?.unmount();
       rootRef.current = null;

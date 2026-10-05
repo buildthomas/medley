@@ -41,7 +41,8 @@ function ask(timeoutMs: number): Promise<Payload | null> {
 }
 
 export async function transferFromOldOrigin() {
-  if (location.origin === OLD_ORIGIN || location.hostname !== 'localhost') return;
+  // Only the address that replaced :5173 (a hosted or test server elsewhere has nothing to take over).
+  if (location.hostname !== 'localhost' || location.port !== '32123') return;
   try {
     if (localStorage.getItem(DONE_KEY)) return;
   } catch {
