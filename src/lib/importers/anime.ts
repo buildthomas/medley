@@ -15,9 +15,14 @@ import { commitFoundTracks, importSoundtrackPlaylist, type AutoAddResult, type D
 import { normalize } from '../parse';
 
 const BAD =
-  /\bcover\b|reaction|piano|\blyrics?\b|karaoke|nightcore|slowed|sped up|\b8d\b|\bhours?\b|\bloop\b|\bamv\b|\bedit\b|fan ?made|tutorial|guitar|drum|bass cover|remix|\bmashup\b|instrumental|off vocal|8-bit|music box|orchestral/i;
+  /\bcover\b|reaction|piano|\blyrics?\b|karaoke|nightcore|slowed|sped up|\b8d\b|\bhours?\b|\bloop\b|\bamv\b|\bedit\b|fan ?made|tutorial|guitar|drum|bass cover|remix|\bmashup\b|instrumental|off vocal|8-bit|music box|orchestral|sheet music|\b(only|just) (bass|drums?|vocals?)\b|\blyre\b|ocarina|kalimba|violin|\bflute\b|\bsax(ophone)?\b|fan animation|animatic|genshin|roblox|minecraft|beat ?saber|\bosu!?(?=\s|$)|gameplay|\btaiko\b|歌ってみた|弾いてみた|叩いてみた|演奏してみた|カバー|切り抜き|ピアノ|ベース/i;
 const CREDITLESS = /creditless|non-?credit|\bnc(op|ed)\b|clean (opening|ending)/i;
 const OFFICIAL = /official|\bmv\b|music video|- topic$/i;
+// The music video is what people mean by "the opening": rank it above audio-only uploads.
+const MUSIC_VIDEO = /\bmv\b|\bpv\b|music video|official video|music clip|video clip/i;
+// Live performances, often on the artist's own channel, are never the version you want.
+const LIVE =
+  /\blive\b|ライブ|\bconcert\b|\btour\b|first take|\bfest(ival)?\b|\bacoustic\b|unplugged|\bsessions?\b|\brehearsal\b|\bon stage\b|budokan|\b(arena|dome)\b|\bin concert\b|\bjam\b/i;
 
 const roleOf = (t: AnimeTheme['type']): TrackRole => (t === 'OP' ? 'op' : t === 'ED' ? 'ed' : 'insert');
 
@@ -30,7 +35,8 @@ function scoreHit(hit: VideoHit, theme: AnimeTheme, anime: CatalogGame): number 
   const title = normalize(hit.title);
   const song = normalize(theme.song);
   const channel = normalize(hit.channel.replace(/\s*-\s*topic$/i, ''));
-  const songMatch = !!song && title.includes(song);
+  // Spacing varies between uploads ("KICKBACK" vs "KICK BACK"), so also compare without spaces.
+  const songMatch = !!song && (title.includes(song) || title.replaceAll(' ', '').includes(song.replaceAll(' ', '')));
   const artistMatch =
     !!channel && theme.artists.some((a) => { const n = normalize(a); return n && (channel.includes(n) || n.includes(channel)); });
   const animeMatch = [anime.title, ...(anime.altTitles ?? [])].some((n) => { const x = normalize(n); return x.length >= 3 && title.includes(x); });
@@ -41,30 +47,43 @@ function scoreHit(hit: VideoHit, theme: AnimeTheme, anime: CatalogGame): number 
   let score = 0;
   if (songMatch) score += 5;
   if (artistMatch) score += 4;
+  // The song on the artist's own channel is the original (usually the music video): it beats
+  // the studio's TV-size opening and fans' re-uploads.
+  if (songMatch && artistMatch) score += 3;
   if (animeMatch) score += 2;
   if (typeMatch) score += 3;
   if (OFFICIAL.test(hit.title) || OFFICIAL.test(hit.channel)) score += 1.5;
+  if (MUSIC_VIDEO.test(hit.title)) score += 1;
   if (CREDITLESS.test(hit.title)) score += 1;
   if (BAD.test(hit.title)) score -= 8;
+  // Unless the song itself is called "… Live" or similar.
+  if (LIVE.test(hit.title) && !LIVE.test(theme.song)) score -= 7;
   const d = hit.duration ?? 0;
   if (d >= 60 && d <= 480) score += 1;
   else score -= 5;
+  if (d >= 150 && d <= 480) score += 0.5; // the full song rather than the ~90 s TV size
   return score;
 }
 
-async function findThemeVideo(theme: AnimeTheme, anime: CatalogGame): Promise<VideoHit | null> {
+/**
+ * Candidate videos for one song, best first, with their scores (scripts/try-import.ts `songs`
+ * prints these). Stops after the first search when it already found a strong match.
+ */
+export async function rankThemeVideos(theme: AnimeTheme, anime: CatalogGame): Promise<{ hit: VideoHit; score: number }[]> {
   const queries = [
     `${theme.artists[0] ?? ''} ${theme.song}`.trim(),
     `${anime.title} ${theme.type}${theme.seq ?? ''} ${theme.song}`,
   ];
-  let best: { hit: VideoHit; score: number } | null = null;
+  const seen = new Map<string, { hit: VideoHit; score: number }>();
   for (const q of queries) {
-    for (const hit of (await searchVideos(q)).slice(0, 12)) {
-      const s = scoreHit(hit, theme, anime);
-      if (!best || s > best.score) best = { hit, score: s };
-    }
-    if (best && best.score >= 9) break; // artist's own upload found
+    for (const hit of (await searchVideos(q)).slice(0, 12)) if (!seen.has(hit.id)) seen.set(hit.id, { hit, score: scoreHit(hit, theme, anime) });
+    if ([...seen.values()].some((c) => c.score >= 9)) break; // the artist's own upload
   }
+  return [...seen.values()].sort((a, b) => b.score - a.score);
+}
+
+async function findThemeVideo(theme: AnimeTheme, anime: CatalogGame): Promise<VideoHit | null> {
+  const [best] = await rankThemeVideos(theme, anime);
   return best && best.score >= 6 ? best.hit : null;
 }
 

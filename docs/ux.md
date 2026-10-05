@@ -23,7 +23,7 @@ User-facing words: "title(s)" or the kind's own word (`kindLabel`, `titlesLabel`
 | **Home** | What Medley is; sign-in on a hosted Medley | The logo; the only page when signed out (hosted) |
 | **Discover** (tab, default) | Find titles: shelves per domain, Browse with filters, Series & franchises, search (titles, your tracks, MusicBrainz artists) | Tab; any tag or list link |
 | **Title page** (overlay) | What the title is (credits, tags, links, cover credit), its tracks *with labels*, add / play / shuffle / remove / change source; anime songs list | Any title mention (tile, now playing, a track's "from", track rows' title, Library row, artist credits) |
-| **Track page** (overlay) | Everything about one track: labels (kind & number, voice, types: editable), length, play stats, source, play / like / never / rename, links to its title and credited artists | Any track name (title page, up next, recently played, program, search results, now playing, Library ⓘ) |
+| **Track page** (overlay) | Everything about one track: labels (kind & number, voice, types: editable), length, play stats, source, play / like / never / rename, *Wrong video?* (swap the upload), links to its title and credited artists | Any track name (title page, up next, recently played, program, search results, now playing, Library ⓘ) |
 | **Listen** (tab) | Now playing, up next, program, recently played, filters | Tab; ⤢ on the docked player |
 | **Library** (tab) | Everything you own, in bulk: on/off in rotation, sort, fix names and labels, remove | Tab |
 | **Add link** (tab) | Bring music in: YouTube links, a single song, anime openings lists, Steam; backup, storage, sign-out | Tab |

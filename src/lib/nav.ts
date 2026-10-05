@@ -68,6 +68,13 @@ function push(page: Page) {
 export const openTitle = (id: string) => push({ type: 'title', id });
 export const openTrack = (id: string) => push({ type: 'track', id });
 
+/** Swap the top page for another without a new history entry (a track whose id changed). */
+export function replaceTop(page: Page) {
+  stack = [...stack.slice(0, -1), page];
+  history.replaceState(null, '', urlFor(stack));
+  emit();
+}
+
 /** Close the top page (like the back button). */
 export function closeTop() {
   if (!stack.length) return;

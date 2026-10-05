@@ -6,7 +6,10 @@ import { useEffect, useState } from 'react';
 import { db } from '../db';
 import { useCatalog } from '../lib/catalog';
 import { kindLabel, kindOf, ROLES } from '../lib/kinds';
-import { closeTop, openTitle } from '../lib/nav';
+import { closeTop, openTitle, replaceTop } from '../lib/nav';
+import { parseYouTubeLink, type VideoHit } from '../lib/api';
+import { replaceTrackVideo } from '../lib/importer';
+import { rankThemeVideos } from '../lib/importers/anime';
 import { normalize, TRACK_TYPES } from '../lib/parse';
 import { isVocal, lengthOf, LENGTHS } from '../lib/picker';
 import type { Track, TrackRole } from '../types';
@@ -198,6 +201,8 @@ export function TrackDetail({ id, session }: { id: string; session: Session }) {
           <p className="muted small">Labels drive the Listen filters (Song type, Voice, Track types, Length).</p>
         </section>
 
+        <OtherVersions track={track} />
+
         <section className="tag-group">
           <h3>About</h3>
           <dl className="facts">
@@ -251,5 +256,85 @@ export function TrackDetail({ id, session }: { id: string; session: Session }) {
         </section>
       </div>
     </>,
+  );
+}
+
+/**
+ * "Wrong video?": swap the video behind the track (a live version instead of the music video,
+ * a fan upload, a removed video). Anime songs list the other candidates the importer found;
+ * any track can take a pasted YouTube link. Name, labels, likes and plays are kept.
+ */
+function OtherVersions({ track }: { track: Track }) {
+  const cat = useCatalog();
+  const [candidates, setCandidates] = useState<{ hit: VideoHit; score: number }[] | null>(null);
+  const [link, setLink] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const anime = cat?.byId.get(track.gameId);
+  const theme =
+    anime?.kind === 'anime' && track.role && track.role !== 'score'
+      ? anime.themes?.find((th) => normalize(th.song) === normalize(track.title)) ??
+        anime.themes?.find((th) => (th.type === 'IN' ? 'insert' : th.type.toLowerCase()) === track.role && (th.seq ?? null) === (track.seq ?? null))
+      : undefined;
+
+  async function run(fn: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const use = (videoId: string, duration?: number | null) =>
+    run(async () => {
+      const id = await replaceTrackVideo(track, videoId, duration);
+      replaceTop({ type: 'track', id });
+    });
+
+  return (
+    <section className="tag-group">
+      <h3>Wrong video?</h3>
+      <p className="muted small">Swap in another upload (say the music video instead of a live version). The name, labels, likes and plays stay.</p>
+      {theme && anime && !candidates && (
+        <button disabled={busy} onClick={() => run(async () => setCandidates((await rankThemeVideos(theme, anime)).filter((c) => c.hit.id !== track.videoId).slice(0, 6)))}>
+          {busy ? 'Searching…' : 'Find other versions'}
+        </button>
+      )}
+      {candidates && (
+        <ul className="candidates">
+          {candidates.map(({ hit }) => (
+            <li key={hit.id}>
+              <a href={`https://www.youtube.com/watch?v=${hit.id}`} target="_blank" rel="noreferrer">
+                {hit.title}
+              </a>
+              <span className="muted small">
+                {hit.channel} · {formatTime(hit.duration)}
+              </span>
+              <button className="small-btn" disabled={busy} onClick={() => use(hit.id, hit.duration)}>
+                Use this
+              </button>
+            </li>
+          ))}
+          {!candidates.length && <li className="muted">No other versions found.</li>}
+        </ul>
+      )}
+      <div className="toolbar">
+        <input className="grow" placeholder="…or paste a YouTube link" value={link} onChange={(e) => setLink(e.target.value)} aria-label="YouTube link" />
+        <button
+          disabled={busy || !link.trim()}
+          onClick={() => {
+            const parsed = parseYouTubeLink(link);
+            if (parsed?.kind !== 'video') return setError('That isn’t a link to a single YouTube video.');
+            void use(parsed.id);
+          }}
+        >
+          Use video
+        </button>
+      </div>
+      {error && <p className="err small">{error}</p>}
+    </section>
   );
 }

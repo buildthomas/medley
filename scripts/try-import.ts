@@ -4,6 +4,7 @@
 //   npx tsx scripts/try-import.ts import anime frieren
 //   npx tsx scripts/try-import.ts import film "spider-man: across"
 //   npx tsx scripts/try-import.ts candidates film moana      (ranked playlists + vocal share)
+//   npx tsx scripts/try-import.ts songs anime chainsaw man   (each OP/ED's top YouTube candidates + scores)
 //
 // kind: game | film | series | anime | artist. The title is a case-insensitive substring;
 // the most popular match wins.
@@ -12,8 +13,8 @@ import 'fake-indexeddb/auto';
 
 const [mode, kind, ...rest] = process.argv.slice(2);
 const query = rest.join(' ');
-if (!['import', 'candidates'].includes(mode) || !kind || !query) {
-  console.log('Usage: npx tsx scripts/try-import.ts import|candidates <kind> <title>');
+if (!['import', 'candidates', 'songs'].includes(mode) || !kind || !query) {
+  console.log('Usage: npx tsx scripts/try-import.ts import|candidates|songs <kind> <title>');
   process.exit(1);
 }
 (globalThis as { __MEDLEY_API_BASE__?: string }).__MEDLEY_API_BASE__ = process.env.MEDLEY_URL ?? 'http://localhost:32123';
@@ -33,7 +34,19 @@ if (!work) {
 }
 console.log(`${work.title} (${work.year ?? '?'}) · ${work.id}`);
 
-if (mode === 'candidates') {
+if (mode === 'songs') {
+  const { rankThemeVideos } = await import('../src/lib/importers/anime.ts');
+  for (const theme of work.themes ?? []) {
+    console.log(`
+${theme.type}${theme.seq ?? ''} "${theme.song}" by ${theme.artists.join(', ')}`);
+    try {
+      for (const { hit, score } of (await rankThemeVideos(theme, work)).slice(0, 4))
+        console.log(`  ${score.toFixed(1).padStart(6)} | ${hit.title} [${hit.channel}, ${hit.duration ?? '?'}s]`);
+    } catch (e) {
+      console.log(`  couldn't search: ${(e as Error).message}`);
+    }
+  }
+} else if (mode === 'candidates') {
   for (const c of (await findCandidates(work)).slice(0, 8)) {
     const line = `${c.score.toFixed(1).padStart(5)} | ${c.hit.title} (${c.hit.videoCount ?? '?'} videos, ${c.hit.channel})`;
     try {

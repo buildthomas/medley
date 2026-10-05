@@ -83,3 +83,7 @@
     those containers `min-width: 0`.
 33. **Film "franchises" like "list of Pixar films"** → Wikidata P179 often points at lists;
     filtered by `NOT_A_SERIES`.
+34. **Anime song import picked a live performance** (Chainsaw Man's KICK BACK) → the artist's live
+    upload matched as well as the music video, whose title spelled the song "KICKBACK". Song names
+    are now also compared without spaces, live versions get −7, the artist's own upload +3. Wrong
+    picks in existing libraries: track page → *Wrong video?*.

@@ -644,3 +644,21 @@ export async function commitFoundTracks(
     ],
   });
 }
+
+/**
+ * Swap the video behind a track (a live version picked instead of the music video, a removed
+ * upload): a new track for `videoId` in the same title that keeps the name, labels, likes and
+ * play counts, replacing the old one. Returns the new track id.
+ */
+export async function replaceTrackVideo(track: Track, videoId: string, duration?: number | null): Promise<string> {
+  if (videoId === track.videoId && track.start == null) return track.id;
+  const length = duration !== undefined ? duration : (await fetchVideo(videoId).catch(() => null))?.duration ?? null;
+  return db.transaction('rw', db.tracks, async () => {
+    const taken = await db.tracks.get(videoId);
+    const id = taken && taken.gameId !== track.gameId ? `${videoId}~${track.gameId}` : videoId;
+    const { start: _start, end: _end, ...rest } = track;
+    await db.tracks.put({ ...rest, id, videoId, duration: length, unavailable: false });
+    if (id !== track.id) await db.tracks.delete(track.id);
+    return id;
+  });
+}

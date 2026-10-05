@@ -19,7 +19,7 @@ already made with the owner (so you don't re-litigate them). Read this before yo
 | Change | How to check it |
 |---|---|
 | UI | The running app at desktop width and at 375×812. Check `document.documentElement.scrollWidth === innerWidth` (no sideways scrolling) |
-| Importers (`src/lib/importer.ts`, `importers/*`) | `npx tsx scripts/try-import.ts import <kind> <title>` runs the real import against an in-memory database and prints every track with role/vocal/artist. `candidates` instead of `import` ranks playlists. Needs `npm run dev` running |
+| Importers (`src/lib/importer.ts`, `importers/*`) | `npx tsx scripts/try-import.ts import <kind> <title>` runs the real import against an in-memory database and prints every track with role/vocal/artist. `candidates` instead of `import` ranks playlists; `songs` shows each anime OP/ED's top YouTube candidates with scores. Needs `npm run dev` running |
 | Library logic (commitDraft, migrations, repairs) | A throwaway `.mts` script that imports `fake-indexeddb/auto`, then the app modules, seeds rows and prints the result. Put it in a gitignored folder inside the repo (packages must resolve), e.g. `data/`, and delete it after |
 | Catalog builders | Run one builder alone (`npm run catalog -- --only anime`) and inspect `src/data/*.json` with `node -e` |
 | Server / hosting | `npm run build`, then run `node server/serve.ts` with `PORT=5190`, `MEDLEY_DATA_DIR`/`MEDLEY_CONFIG_DIR` pointing at temp folders (never the real ones), and probe with curl (`/api/session`, `/healthz`). Add an `invites.json` there to test sign-in; `MEDLEY_ROLE=web` + `node server/worker.ts` for the split setup |

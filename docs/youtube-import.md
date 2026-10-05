@@ -94,11 +94,27 @@ anime "OST"/"opening". Ranking also checks `altTitles` and penalises a year mism
 
 ### Anime (`importers/anime.ts`)
 
-Every theme from the catalog (`themes`) is searched individually: first `${artist} ${song}`,
-then `${anime} ${OP|ED}${seq} ${song}`. `scoreHit` adds up song-title match (+5), artist match
-(+4), anime-name match (+2), OP/ED type match (+3), official/creditless uploads; covers, nightcore,
-reactions, "1 hour" etc. are −8; duration must be 60–480 s; threshold 6. Found tracks get
-`role` op/ed/insert, `seq`, `vocal: true`, `artist`, and are stored under a `search` source.
+Every theme from the catalog (`themes`) is searched individually (`rankThemeVideos`): first
+`${artist} ${song}`, then `${anime} ${OP|ED}${seq} ${song}` (skipped when the first search already
+found the artist's own upload). `scoreHit` prefers **the original**, i.e. the music video on the artist's
+channel, over the studio's TV-size opening and fans' re-uploads:
+
+| Signal | Score |
+|---|---|
+| Song name in the title (also compared without spaces: "KICKBACK" = "KICK BACK") | +5 |
+| Uploaded by the credited artist (channel name) | +4, and +3 more when the song matches too |
+| Anime name / "Opening 1"-style type in the title | +2 / +3 |
+| Official channel or title, music video / MV / PV / clip, creditless | +1.5, +1, +1 |
+| 60–480 s (else −5); full length ≥ 150 s | +1; +0.5 |
+| Covers, reactions, lyrics videos, nightcore, loops, instrument covers (piano, lyre, ocarina…), sheet music, fan animations, game footage (Beat Saber, osu!, Roblox…), 歌ってみた/弾いてみた/カバー/切り抜き… | −8 |
+| Live performances (live, concert, tour, THE FIRST TAKE, acoustic, unplugged, ライブ…) unless the song's own name says so | −7 |
+
+A song is imported when the best candidate scores ≥ 6; otherwise it's skipped rather than taking
+something wrong. Check a title's choices with `npx tsx scripts/try-import.ts songs anime <title>`.
+If a pick is still wrong, the track page's **Wrong video?** lists the other candidates (or takes a
+pasted link) and swaps the video, keeping name, labels, likes and plays (`replaceTrackVideo`).
+Found tracks get `role` op/ed/insert, `seq`, `vocal: true`, `artist`, and are stored under a
+`search` source.
 Then the OST playlist is imported like a game soundtrack (instrumental, role `score`).
 
 What gets imported is the **scope** (`AnimeScope`: `all` | `songs` | `oped` | `op`), a per-browser
