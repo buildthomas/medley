@@ -10,10 +10,12 @@ liked or skipped.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:32123
 ```
 
-`npm start` builds and serves a production version on port 5174. The app needs its small
+Medley lives at **localhost:32123**: the logo's bar heights, 3-2-1-2-3. `npm start` builds and
+serves a production version on the same port. (It used to be :5173. While `npm run dev` runs,
+the old address redirects here and hands over a library saved there, once, automatically.) The app needs its small
 server to read YouTube metadata, so it is not a static site (see *Your data and hosting*).
 
 ## Four kinds of music

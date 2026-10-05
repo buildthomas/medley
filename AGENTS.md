@@ -17,7 +17,7 @@ lists every doc with a one-line summary. Read only what your task needs.
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173 (Vite + a small API middleware for YouTube/Steam)
+npm run dev          # http://localhost:32123 (Vite + a small API middleware for YouTube/Steam)
 npm run typecheck    # tsc --noEmit: the only automated check; run it after every change
 ```
 

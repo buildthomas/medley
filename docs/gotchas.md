@@ -57,3 +57,8 @@
     `altTitles` are searched and matched too; artist + song title is the strongest signal.
 24. **Discover shows "Loading catalog…" for a few seconds** → all four catalogs (~10 MB JSON)
     load on first visit to Discover. Expected.
+25. **Changing the port empties the library** → browser storage is per origin, and the port is part
+    of it. The dev server uses `strictPort` (fail rather than drift to another port), and the move
+    from :5173 to :32123 is bridged by a one-time hand-over (`server/legacy-origin.ts`,
+    `src/lib/originTransfer.ts`; same-site iframes aren't storage-partitioned). Don't change the port again
+    without a similar bridge.

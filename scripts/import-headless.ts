@@ -24,7 +24,7 @@ const opt = (name: string, fallback: string) => {
 const GROUPS = opt('groups', 'mine,nintendo,years,indie').split(',');
 const OUT = opt('out', join(medleyPaths().dataDir, 'medley-library.json'));
 const CONCURRENCY = Number(opt('concurrency', '6'));
-(globalThis as { __MEDLEY_API_BASE__?: string }).__MEDLEY_API_BASE__ = opt('api', 'http://localhost:5173');
+(globalThis as { __MEDLEY_API_BASE__?: string }).__MEDLEY_API_BASE__ = opt('api', 'http://localhost:32123');
 
 const { db, exportLibrary, importLibrary, setMeta, getMeta } = await import('../src/db.ts');
 const { loadCatalog } = await import('../src/lib/catalog.ts');

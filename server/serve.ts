@@ -3,7 +3,7 @@
 //   npm run build && npm run serve        (Node ≥ 22.18 runs this TypeScript file directly)
 //
 // Environment:
-//   PORT                 default 5174
+//   PORT                 default 32123 (the logo's bar heights; same as `npm run dev`)
 //   HOST                 default 0.0.0.0
 //   MEDLEY_DATA_DIR      refreshed catalogs & caches (see scripts/paths.mjs for defaults)
 //   MEDLEY_CONFIG_DIR    my-games.json
@@ -139,7 +139,7 @@ const server = createServer((req, res) => {
   api.handle(req, res, () => serveStatic(req, res));
 });
 
-const port = Number(env.PORT ?? 5174);
+const port = Number(env.PORT ?? 32123);
 server.listen(port, env.HOST ?? '0.0.0.0', () => {
   log(`http://localhost:${port}  (data: ${dataDir}, config: ${configDir}${passwordHash ? ', password on' : ''})`);
 });

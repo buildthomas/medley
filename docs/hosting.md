@@ -23,7 +23,7 @@ first start.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PORT`, `HOST` | `5174`, `0.0.0.0` | Listen address (`8080` in the Docker image) |
+| `PORT`, `HOST` | `32123`, `0.0.0.0` | Listen address (`8080` in the Docker image) |
 | `MEDLEY_DATA_DIR`, `MEDLEY_CONFIG_DIR` | OS folders above (`/data`, `/config` in Docker) | Storage |
 | `MEDLEY_PASSWORD` | unset | Ask for a password (HTTP basic auth, any user name). **Set this on any public host**, or anyone can use your server to search YouTube |
 | `MEDLEY_RATE_LIMIT` | `600` | YouTube/MusicBrainz API calls per minute per IP (`0` = off). Bulk imports make many calls; don't go much lower |
@@ -36,10 +36,10 @@ first start.
 
 ```bash
 npm ci && npm run build
-MEDLEY_PASSWORD=… npm run serve       # http://localhost:5174
+MEDLEY_PASSWORD=… npm run serve       # http://localhost:32123
 ```
 
-Put it behind a reverse proxy for HTTPS. Caddy example: `medley.example.com { reverse_proxy localhost:5174 }`.
+Put it behind a reverse proxy for HTTPS. Caddy example: `medley.example.com { reverse_proxy localhost:32123 }`.
 
 **Docker** (Fly.io, Railway, Render, a VPS…):
 

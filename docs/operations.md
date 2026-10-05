@@ -8,9 +8,9 @@ repo (`scripts/paths.mjs`); the user's library is in the browser and moves via b
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | App + API on http://localhost:5173 |
+| `npm run dev` | App + API on http://localhost:32123 (the logo: bars 3-2-1-2-3) |
 | `npm run build` | Typecheck + production build to `dist/` |
-| `npm run serve` | Production server (`server/serve.ts`: `dist/` + API) on :5174. `npm start` = build + serve |
+| `npm run serve` | Production server (`server/serve.ts`: `dist/` + API) on :32123. `npm start` = build + serve |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run catalog` | Rebuild all `src/data/*.json` (≈30–40 min; +≈30 min the first time for Steam keywords) |
 | `npm run catalog -- --only anime,artists` | Rebuild some domains (`games`, `screen`, `anime`, `artists`); other domains' collections are kept |

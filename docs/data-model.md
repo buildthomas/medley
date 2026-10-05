@@ -45,7 +45,10 @@ Where it comes from: [data-pipeline.md](data-pipeline.md).
 
 Before the rename the database was `vgm-shuffle` (and localStorage keys `vgm-shuffle:*`).
 `src/migrate.ts` copies them to the new names once, before the app renders, and leaves the old
-ones as a backup. The schema lives in `defineSchema()` so the migration can open the old database.
+ones as a backup. The app also moved from port 5173 to 32123, a different origin with its own
+storage: `src/lib/originTransfer.ts` loads `http://localhost:5173/__medley/transfer` (served by the
+dev server, `server/legacy-origin.ts`) in a hidden iframe and copies that origin's library and
+settings over once, when the new one is empty (`medley:origin-transfer` records the outcome). The schema lives in `defineSchema()` so the migration can open the old database.
 
 | Table | Key | Purpose |
 |---|---|---|
