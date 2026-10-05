@@ -2,7 +2,7 @@
 
 **Medley** (formerly VGM Shuffle) is a personal music radio: a local web app that plays music
 through YouTube's embedded player, with its own shuffle algorithm. Three domains, each with its
-own catalog and importer: **games** (~7,000, Wikidata + Steam), **anime** (1,200, AniList +
+own catalog and importer: **games** (~9,100, Wikidata + Steam), **anime** (1,200, AniList +
 AnimeThemes OP/ED data) and **film & TV** (~3,900, Wikidata). (An artists domain existed
 until Oct 2026; it's in git history if it's ever wanted back.) Internally a "game" (`Game`, `CatalogGame`) means any *work*, whatever its
 `kind`.
