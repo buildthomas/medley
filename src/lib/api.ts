@@ -32,7 +32,7 @@ export interface VideoData {
 
 /** Base URL of the local API: empty in the browser; set by scripts/import-headless.ts in Node. */
 export function apiUrl(path: string) {
-  return ((globalThis as { __VGM_API_BASE__?: string }).__VGM_API_BASE__ ?? '') + path;
+  return ((globalThis as { __MEDLEY_API_BASE__?: string }).__MEDLEY_API_BASE__ ?? '') + path;
 }
 
 async function get<T>(path: string): Promise<T> {

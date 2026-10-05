@@ -10,7 +10,6 @@ config/*
 .claude
 .vscode
 .git
-companion
 *.log
 *-backup*.json
 vgm-library*.json

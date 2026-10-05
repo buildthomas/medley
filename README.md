@@ -123,19 +123,6 @@ Your own games go in `my-games.json` in Medley's config folder (`%APPDATA%\Medle
 each with fixed YouTube sources. They're imported once on start-up and form the *My games*
 collection.
 
-## Desktop companion
-
-A small always-on-top window that shows what's playing (cover, title, next up, progress) with
-play/pause, back, skip and like. It works with Medley in a background tab, and with a hosted Medley.
-
-```bash
-npm run companion:install   # once: downloads Electron into companion/
-npm run companion
-```
-
-Paste the code from **Add link → Desktop companion** the first time. (In Chrome/Edge, the **⧉**
-button in the player is a lighter alternative that needs no install.)
-
 ## Your data and hosting
 
 - **Your library** (titles, tracks, plays, likes) lives in **this browser's IndexedDB**, per

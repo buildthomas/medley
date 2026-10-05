@@ -131,8 +131,7 @@ const server = createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify({ ok: true, catalogs: api.refreshStatus().generatedAt }));
   }
-  // The companion relay authenticates with its channel key instead (server/remote.ts).
-  if (!path.startsWith('/api/remote/') && !authorized(req)) {
+  if (!authorized(req)) {
     res.statusCode = 401;
     res.setHeader('WWW-Authenticate', 'Basic realm="Medley", charset="UTF-8"');
     return res.end('Password required');

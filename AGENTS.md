@@ -7,8 +7,8 @@ AnimeThemes OP/ED data), **film & TV** (~3,900, Wikidata) and **artists** (~1,60
 MusicBrainz search). Internally a "game" (`Game`, `CatalogGame`) means any *work*, whatever its
 `kind`.
 
-Storage keys still say `vgm-shuffle` (IndexedDB name, `vgm-shuffle:*` localStorage keys) on
-purpose: renaming them would orphan existing libraries.
+Storage is named `medley` (IndexedDB) and `medley:*` (localStorage). Libraries from before the
+rename are copied over once on load (`src/migrate.ts`); the old `vgm-shuffle` copies stay as a backup.
 
 This file is the 2-minute orientation. Go deeper through [docs/README.md](docs/README.md), which
 lists every doc with a one-line summary. Read only what your task needs.
@@ -31,9 +31,8 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
 | `src/lib/` | Logic without UI: shuffle (`picker.ts`), importing (`importer.ts`, `importers/anime.ts`, `importers/artist.ts`, `parse.ts`), catalog (`catalog.ts`), search, background jobs (`bulk.ts`, `updater.ts`, `sync.ts`) |
 | `src/components/` | Views; `discover/` holds the cover-art browsing UI |
 | `src/data/` | **Generated, committed** public catalogs (`catalog.json` games, `screen.json`, `anime.json`, `artists.json`, `collections.json`). Rebuilt by `npm run catalog` |
-| `server/` | `/api/*` (`api.ts`: YouTube scraping, Steam, MusicBrainz, catalog refresh, personal games; `remote.ts`: companion relay), mounted by `plugin.ts` in dev and `serve.ts` in production |
+| `server/` | `/api/*` (`api.ts`: YouTube scraping, Steam, MusicBrainz, catalog refresh, personal games), mounted by `plugin.ts` in dev and `serve.ts` in production |
 | `scripts/` | One builder per domain (`catalog-`, `screen-`, `anime-`, `artist-builder.mjs`, combined by `build-all.mjs`), shared Wikidata helpers (`wd.mjs`), enrichment, headless bulk importer |
-| `companion/` | Desktop companion (Electron, own `package.json`): always-on-top now-playing window, talks to `/api/remote/*` |
 | `config/` | Only `my-games.example.json`. Real personal config lives **outside the repo** (`scripts/paths.mjs`) |
 | `Dockerfile` | Production image (`server/serve.ts`); see [docs/hosting.md](docs/hosting.md) |
 | `docs/` | Everything else you need to know |

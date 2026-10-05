@@ -74,7 +74,7 @@ function facetValues(g: CatalogGame, kind: FacetKind): string[] {
 }
 
 const PAGE = 72;
-const DOMAIN_KEY = 'vgm-shuffle:discover-domain';
+const DOMAIN_KEY = 'medley:discover-domain';
 
 interface ShelfDef {
   key: string;

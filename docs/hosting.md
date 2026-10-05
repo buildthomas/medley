@@ -1,7 +1,7 @@
 # Hosting Medley
 
 **Summary:** Medley is a static React app plus a small Node API (YouTube reading, catalog
-refresh, companion relay). `npm run build && npm run serve` (or the Dockerfile) runs both in one
+refresh). `npm run build && npm run serve` (or the Dockerfile) runs both in one
 process. Data lives in a data directory outside the code; your library stays in each browser.
 
 ## What lives where
@@ -12,7 +12,6 @@ process. Data lives in a data directory outside the code; your library stays in 
 | Refreshed catalogs, caches, refresh state | `MEDLEY_DATA_DIR` | Persistent volume. Rebuildable, but a rebuild takes ~30 min |
 | Personal config (`my-games.json`) | `MEDLEY_CONFIG_DIR` | Persistent volume. Template: `config/my-games.example.json` |
 | Your library (titles, tracks, likes, plays) | Each visitor's browser (IndexedDB, per site address) | Move it with **Add link → Backup**. A new address starts empty |
-| Companion channels | Server memory | Nothing written to disk |
 
 Defaults when the variables aren't set (also used by `npm run dev`; see `scripts/paths.mjs`):
 Windows `%LOCALAPPDATA%\Medley\data` and `%APPDATA%\Medley`; macOS
@@ -41,8 +40,6 @@ MEDLEY_PASSWORD=… npm run serve       # http://localhost:5174
 ```
 
 Put it behind a reverse proxy for HTTPS. Caddy example: `medley.example.com { reverse_proxy localhost:5174 }`.
-Nginx needs `proxy_buffering off` for `/api/remote/` (the companion's event stream); the server
-already sends `X-Accel-Buffering: no`.
 
 **Docker** (Fly.io, Railway, Render, a VPS…):
 
@@ -56,7 +53,7 @@ docker cp my-games.json medley:/config/   # optional, your own games
 
 On Fly.io: `fly launch` (it finds the Dockerfile), `fly volumes create medley_data`, mount it at
 `/data` in `fly.toml`, and `fly secrets set MEDLEY_PASSWORD=…`. One small machine (256–512 MB) is plenty.
-Keep it to a single instance: refreshes and companion channels are per process.
+Keep it to a single instance: refreshes are per process.
 
 ## How the hosted server behaves
 
@@ -66,9 +63,6 @@ Keep it to a single instance: refreshes and companion channels are per process.
 - **Static files:** hashed `/assets/*` are cached forever; everything is served brotli/gzip
   compressed (the ~9 MB of catalogs become ~1.5 MB).
 - **Health check:** `GET /healthz` (no password) → `{ ok, catalogs }`.
-- **The companion** connects to the hosted URL with the code from **Add link → Desktop
-  companion** (`https://your-host#key`). Its routes skip the password; the 128-bit key is the
-  credential.
 
 ## Caveats
 
@@ -78,6 +72,5 @@ Keep it to a single instance: refreshes and companion channels are per process.
   fail only when hosted, this is why.
 - **GitHub Pages / pure static hosting** can't run the API. It could be ported to serverless
   functions (each route in `server/api.ts` is stateless except the refresh, which would become a
-  scheduled job writing to object storage, and the companion relay, which needs a long-lived
-  connection, e.g. Cloudflare Durable Objects).
+  scheduled job writing to object storage).
 - Libraries don't sync between browsers. Use Backup → Restore.

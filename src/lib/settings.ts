@@ -1,6 +1,6 @@
 import type { Filters } from '../types';
 
-const KEY = 'vgm-shuffle:filters';
+const KEY = 'medley:filters';
 
 export const DEFAULT_FILTERS: Filters = {
   genres: {},

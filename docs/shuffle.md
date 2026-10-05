@@ -49,7 +49,7 @@ skip is just a normal play. Both are written in one transaction with the next pl
 Chips are tri-state: absent / `in` (only these) / `out` (never these). Within a group, any `in`
 must match; any `out` excludes. Defaults: `types: { extended: 'out' }`, `lengths: { jingle: 'out' }`.
 Persisted to localStorage. Sections in `FiltersPanel` are collapsible (collapsed by default;
-open state in `vgm-shuffle:open-sections`) and show how many chips are active. **Reset** clears
+open state in `medley:open-sections`) and show how many chips are active. **Reset** clears
 chips but keeps the sliders.
 
 ## Session (src/useSession.ts)

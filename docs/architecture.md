@@ -16,18 +16,13 @@ Wikidata SPARQL (Steam id lookups) ◀── direct   ├─ steam.ts    optiona
                                                 ├─ artists.ts  /api/artists/search (MusicBrainz)
                                                 ├─ /api/refresh → scripts/build-all.mjs (all 4 builders)
                                                 ├─ /api/data?name= → <data dir>/*.json (refreshed catalogs)
-                                                ├─ /api/my-games → <config dir>/my-games.json
-                                                └─ remote.ts   /api/remote/* relay ◀──▶ desktop companion (companion/)
+                                                └─ /api/my-games → <config dir>/my-games.json
 ```
 
 The routes live in `server/api.ts`. In development `server/plugin.ts` mounts them in Vite; in
 production `server/serve.ts` serves `dist/` plus the same API from one Node process (compression,
 optional password, rate limit, weekly refresh scheduler). Data and config directories are
 outside the repo (`scripts/paths.mjs`). See [hosting.md](hosting.md).
-
-The **desktop companion** (`companion/`, Electron) is a separate process: it subscribes to the
-relay with the channel key from **Add link → Desktop companion** and sends commands back; the
-app side is `src/lib/remote.ts`.
 
 `scripts/import-headless.ts` is a third mode: it runs the client's import code in Node against an
 in-memory IndexedDB (`fake-indexeddb`) and the running dev server, then writes a backup file.

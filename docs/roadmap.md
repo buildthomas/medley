@@ -17,5 +17,3 @@
   title keywords, or an optional LLM pass.
 - **More domains** (e.g. classical, musicals as their own domain): add a builder in `scripts/`,
   a `kind` in `src/lib/kinds.ts`, and an importer in `src/lib/importers/`.
-- **Renaming the storage keys** (`vgm-shuffle` → `medley`) would need a one-time Dexie copy;
-  not worth it for now.

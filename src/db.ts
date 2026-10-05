@@ -1,7 +1,9 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { Game, Play, Source, Track } from './types';
 
-export const db = new Dexie('vgm-shuffle') as Dexie & {
+// Before the rename to Medley this database was called "vgm-shuffle"; src/migrate.ts copies an
+// existing library over once.
+export const db = new Dexie('medley') as Dexie & {
   games: EntityTable<Game, 'id'>;
   tracks: EntityTable<Track, 'id'>;
   sources: EntityTable<Source, 'id'>;
@@ -9,15 +11,18 @@ export const db = new Dexie('vgm-shuffle') as Dexie & {
   meta: EntityTable<{ key: string; value: unknown }, 'key'>;
 };
 
-db.version(1).stores({
-  games: 'id, title, addedAt',
-  tracks: 'id, gameId, videoId, sourceId',
-  sources: 'id, importedAt',
-  plays: '++id, at, trackId, gameId',
-});
-
-// v2: key/value store for app state that must survive (monthly update bookkeeping).
-db.version(2).stores({ meta: 'key' });
+/** Schema history, shared with the legacy-database migration. Never edit old versions. */
+export function defineSchema(d: Dexie) {
+  d.version(1).stores({
+    games: 'id, title, addedAt',
+    tracks: 'id, gameId, videoId, sourceId',
+    sources: 'id, importedAt',
+    plays: '++id, at, trackId, gameId',
+  });
+  // v2: key/value store for app state that must survive (update bookkeeping).
+  d.version(2).stores({ meta: 'key' });
+}
+defineSchema(db);
 
 export async function getMeta<T>(key: string, fallback: T): Promise<T> {
   return ((await db.meta.get(key))?.value as T) ?? fallback;

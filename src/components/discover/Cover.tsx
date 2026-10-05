@@ -16,7 +16,7 @@ function hue(s: string) {
 //   'none'  → opaque artwork (the normal case)
 type Backdrop = 'light' | 'dark' | 'none';
 const backdropCache = new Map<string, Promise<Backdrop>>();
-const CACHE_KEY = 'vgm-shuffle:cover-backdrops';
+const CACHE_KEY = 'medley:cover-backdrops';
 let stored: Record<string, Backdrop> | null = null;
 
 function storedBackdrops(): Record<string, Backdrop> {

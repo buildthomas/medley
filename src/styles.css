@@ -599,20 +599,6 @@ button.now-cover-btn:focus-visible {
 .anime-matches select {
   min-width: 0;
 }
-.mono {
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
-}
-.code-block {
-  margin: 4px 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--bg-sunken);
-  border: 1px solid var(--line);
-  font: 12px/1.6 ui-monospace, 'Cascadia Code', Consolas, monospace;
-  white-space: pre;
-  overflow-x: auto;
-}
 .scope-picker {
   display: flex;
   flex-wrap: wrap;

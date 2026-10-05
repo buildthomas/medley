@@ -77,7 +77,7 @@ export const ANIME_SCOPES: { id: AnimeScope; label: string; hint: string; types:
   { id: 'oped', label: 'OPs & EDs', hint: 'Openings and endings only', types: ['OP', 'ED'], ost: false },
   { id: 'op', label: 'Openings', hint: 'Openings only', types: ['OP'], ost: false },
 ];
-const SCOPE_KEY = 'vgm-shuffle:anime-scope';
+const SCOPE_KEY = 'medley:anime-scope';
 const scopeListeners = new Set<() => void>();
 
 export function getAnimeScope(): AnimeScope {

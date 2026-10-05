@@ -16,7 +16,7 @@ if (!['import', 'candidates'].includes(mode) || !kind || !query) {
   console.log('Usage: npx tsx scripts/try-import.ts import|candidates <kind> <title>');
   process.exit(1);
 }
-(globalThis as { __VGM_API_BASE__?: string }).__VGM_API_BASE__ = process.env.MEDLEY_URL ?? 'http://localhost:5173';
+(globalThis as { __MEDLEY_API_BASE__?: string }).__MEDLEY_API_BASE__ = process.env.MEDLEY_URL ?? 'http://localhost:5173';
 
 const { db } = await import('../src/db.ts');
 const { loadCatalog } = await import('../src/lib/catalog.ts');

@@ -9,7 +9,6 @@
 //   GET  /api/my-games                        personal games (config dir)
 //   GET  /api/refresh                         catalog refresh status
 //   POST /api/refresh[?force=1]               start a refresh if the catalogs are a week old
-//   /api/remote/*                             relay between the app and the desktop companion
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -19,7 +18,6 @@ import { enrichGames } from '../scripts/enrich.mjs';
 import { ROOT } from '../scripts/paths.mjs';
 import type { CatalogGame } from '../src/types.ts';
 import { searchArtists } from './artists.ts';
-import { createRemote } from './remote.ts';
 import { steamOwnedGames } from './steam.ts';
 import { getPlaylist, getVideo, search } from './youtube.ts';
 
@@ -172,8 +170,6 @@ export function createApi(opts: ApiOptions) {
     return ++h.n > opts.rateLimit;
   }
 
-  const remote = createRemote();
-
   const handle: Handler = async (req, res, next) => {
     if (!req.url?.startsWith('/api/')) return next();
     const url = new URL(req.url, 'http://localhost');
@@ -184,7 +180,6 @@ export function createApi(opts: ApiOptions) {
       res.setHeader('Cache-Control', 'no-store');
       res.end(JSON.stringify(data));
     };
-    if (url.pathname.startsWith('/api/remote/')) return remote.handle(req, res, url);
     try {
       switch (url.pathname) {
         case '/api/search':

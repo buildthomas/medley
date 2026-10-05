@@ -54,7 +54,7 @@ export function TriChips({
   );
 }
 
-const SECTIONS_KEY = 'vgm-shuffle:open-sections';
+const SECTIONS_KEY = 'medley:open-sections';
 
 function readOpenSections(): Record<string, boolean> {
   try {

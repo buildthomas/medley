@@ -102,7 +102,7 @@ reactions, "1 hour" etc. are −8; duration must be 60–480 s; threshold 6. Fou
 Then the OST playlist is imported like a game soundtrack (instrumental, role `score`).
 
 What gets imported is the **scope** (`AnimeScope`: `all` | `songs` | `oped` | `op`), a per-browser
-preference (`getAnimeScope`, localStorage `vgm-shuffle:anime-scope`, picked with
+preference (`getAnimeScope`, localStorage `medley:anime-scope`, picked with
 `AnimeScopePicker`) used by every add path, or passed explicitly (`importAnime(work, { scope })`).
 `importAnime(work, { themes: [theme] })` imports exactly one song (the **+** in the anime page's
 theme list). Songs already in the library (same role + seq + normalised title) are skipped, so

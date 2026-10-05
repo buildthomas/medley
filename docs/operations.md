@@ -12,7 +12,6 @@ repo (`scripts/paths.mjs`); the user's library is in the browser and moves via b
 | `npm run build` | Typecheck + production build to `dist/` |
 | `npm run serve` | Production server (`server/serve.ts`: `dist/` + API) on :5174. `npm start` = build + serve |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run companion:install`, `npm run companion` | Install (once) and start the desktop companion (`companion/`) |
 | `npm run catalog` | Rebuild all `src/data/*.json` (≈30–40 min; +≈30 min the first time for Steam keywords) |
 | `npm run catalog -- --only anime,artists` | Rebuild some domains (`games`, `screen`, `anime`, `artists`); other domains' collections are kept |
 | `npm run import-all` | Headless bulk import of all collections + starter pack → `medley-library.json` in the data dir (needs `npm run dev` running) |
@@ -26,7 +25,6 @@ repo (`scripts/paths.mjs`); the user's library is in the browser and moves via b
 |---|---|---|
 | Refreshed catalogs, caches, headless-import output | `%LOCALAPPDATA%\Medley\data` · `~/Library/Application Support/Medley/data` · `~/.local/share/medley` | `MEDLEY_DATA_DIR` |
 | `my-games.json` (your own games) | `%APPDATA%\Medley` · `~/Library/Application Support/Medley/config` · `~/.config/medley` | `MEDLEY_CONFIG_DIR` |
-| Companion settings (server URL, key, window position) | `%APPDATA%\medley-companion` · `~/Library/Application Support/medley-companion` · `~/.config/medley-companion` | `MEDLEY_COMPANION_PROFILE` |
 | Your library | The browser's IndexedDB (per browser, per site address) | Backup / Restore |
 | Secrets for dev | `.env.local` in the repo (gitignored): optional `STEAM_API_KEY` | Env vars when hosted |
 
@@ -45,18 +43,6 @@ Keyless: open `https://steamcommunity.com/my/games/?tab=all&xml=1` while logged 
 save and choose the file) under **Add link → Import your Steam library**. Page text or a list of
 names also work. Matching: Steam app id → catalog / Wikidata P1733 → name.
 
-## Desktop companion
-
-1. In Medley: **Add link → Desktop companion**, tick the box, copy the code (`<site URL>#<key>`).
-2. `npm run companion:install` once (downloads Electron into `companion/node_modules`), then
-   `npm run companion` and paste the code. It remembers it. `npm run companion -- --connect=<code>`
-   also works.
-3. The window stays on top (📌 toggles), drags anywhere, and has a tray icon. Keys: Space, ←/→, L.
-   Clicking the cover opens Medley in your browser.
-
-Medley must be open in a browser tab; the companion shows and controls that tab's player.
-**new code** in the card disconnects old companions.
-
 ## Troubleshooting
 
 - *Imports all fail with "fetch failed"*: YouTube unreachable or the server restarted mid-run.
@@ -64,5 +50,3 @@ Medley must be open in a browser tab; the companion shows and controls that tab'
 - *Covers missing*: the catalog in use isn't enriched. Run `npm run catalog`, or delete a stale
   `catalog.json` from the data dir so the bundled one wins.
 - *Nothing plays*: check the Listen filters ("reset filters" link) and that games are enabled.
-- *Companion says "Waiting for Medley"*: no browser tab has Medley open with the companion
-  setting on (it's per browser), or the code was renewed.

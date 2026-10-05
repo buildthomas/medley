@@ -10,9 +10,7 @@
     "start": "vite build && node server/serve.ts",
     "catalog": "node scripts/build-catalog.mjs",
     "typecheck": "tsc --noEmit",
-    "import-all": "tsx scripts/import-headless.ts --starter",
-    "companion": "npm --prefix companion start",
-    "companion:install": "npm --prefix companion install"
+    "import-all": "tsx scripts/import-headless.ts --starter"
   },
   "dependencies": {
     "dexie": "^4.4.6",

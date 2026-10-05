@@ -41,7 +41,7 @@ export function writeUrlState(patch: UrlState) {
   }, 300);
 }
 
-const QUEUE_KEY = 'vgm-shuffle:session';
+const QUEUE_KEY = 'medley:session';
 
 export interface SavedSession {
   queue: string[];
@@ -80,7 +80,7 @@ export function saveSession(s: SavedSession) {
   }
 }
 
-const VOLUME_KEY = 'vgm-shuffle:volume';
+const VOLUME_KEY = 'medley:volume';
 
 export function loadVolume(): { volume: number; muted: boolean } {
   try {

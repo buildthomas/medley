@@ -3,7 +3,6 @@ import { db } from '../db';
 import { primaryLink, useCatalog } from '../lib/catalog';
 import { useMediaSession } from '../lib/mediaSession';
 import { pipSupported, usePopOut } from './PopOutPlayer';
-import { useRemote } from '../lib/remote';
 import { TRACK_TYPES } from '../lib/parse';
 import { Cover } from './discover/Cover';
 import { GameDetail } from './discover/GameDetail';
@@ -89,29 +88,6 @@ export function ListenView({
       liked: !!current?.liked,
       elapsed: progress.t,
       length: progress.len,
-    },
-    {
-      toggle: () => (current ? player.current?.toggle() : session.next()),
-      next: skip,
-      prev: session.prev,
-      like: () => current && db.tracks.update(current.id, { liked: !current.liked }),
-    },
-  );
-
-  // The desktop companion (companion/), when enabled under Add link.
-  useRemote(
-    {
-      title: current?.title ?? null,
-      work: currentGame?.title ?? null,
-      kind: currentGame?.kind ?? null,
-      artist: current?.artist ?? null,
-      cover: catGame?.covers?.[0] ?? null,
-      playing,
-      liked: !!current?.liked,
-      position: progress.t,
-      at: Date.now(),
-      length: progress.len ?? current?.duration ?? null,
-      next: queue[0] ? `${queue[0].title} · ${gameMap.get(queue[0].gameId)?.title ?? ''}` : null,
     },
     {
       toggle: () => (current ? player.current?.toggle() : session.next()),

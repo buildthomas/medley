@@ -41,9 +41,11 @@ artist country & years).
 
 Where it comes from: [data-pipeline.md](data-pipeline.md).
 
-## Library (IndexedDB `vgm-shuffle`, Dexie)
+## Library (IndexedDB `medley`, Dexie)
 
-The database keeps its old name so existing libraries survive the rename to Medley.
+Before the rename the database was `vgm-shuffle` (and localStorage keys `vgm-shuffle:*`).
+`src/migrate.ts` copies them to the new names once, before the app renders, and leaves the old
+ones as a backup. The schema lives in `defineSchema()` so the migration can open the old database.
 
 | Table | Key | Purpose |
 |---|---|---|
@@ -80,13 +82,12 @@ Backups (`exportLibrary`) include all five tables, so bookkeeping travels with t
 | Where | Key | Content |
 |---|---|---|
 | URL | `?tab=&track=&t=` | Current tab, track id, position (s). Written by `urlState.writeUrlState` |
-| localStorage | `vgm-shuffle:filters` | Listen filters + sliders |
-| localStorage | `vgm-shuffle:session` | Up-next queue, back stack, current program |
-| localStorage | `vgm-shuffle:volume` | `{ volume, muted }` |
-| localStorage | `vgm-shuffle:open-sections` | Which filter sections are expanded |
-| localStorage | `vgm-shuffle:discover-domain` | Last Discover domain tab |
-| localStorage | `vgm-shuffle:remote` | Desktop companion: `{ enabled, key }` (the channel key; see `src/lib/remote.ts`) |
-| localStorage | `vgm-shuffle:anime-scope` | What adding an anime imports: `all` / `songs` / `oped` / `op` |
-| localStorage | `vgm-shuffle:cover-backdrops` | Cover URL → `light`/`dark`/`none` (transparent-logo analysis cache) |
+| localStorage | `medley:filters` | Listen filters + sliders |
+| localStorage | `medley:session` | Up-next queue, back stack, current program |
+| localStorage | `medley:volume` | `{ volume, muted }` |
+| localStorage | `medley:open-sections` | Which filter sections are expanded |
+| localStorage | `medley:discover-domain` | Last Discover domain tab |
+| localStorage | `medley:anime-scope` | What adding an anime imports: `all` / `songs` / `oped` / `op` |
+| localStorage | `medley:cover-backdrops` | Cover URL → `light`/`dark`/`none` (transparent-logo analysis cache) |
 
 All localStorage access is wrapped in try/catch; the app must work when it's unavailable.
