@@ -1,8 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { titlesLabel } from '../../lib/kinds';
+import type { WorkKind } from '../../types';
 import type { Collections as CollectionsData } from '../../lib/catalog';
 import { getSubscriptions, runUpdate, setSubscribed, UPDATE_INTERVAL, useUpdateStatus } from '../../lib/updater';
 import type { CatalogGame } from '../../types';
+
+// Film & TV groups mix films and series, so they're counted as "titles".
+const DOMAIN_KIND: Record<string, WorkKind | undefined> = { game: 'game', anime: 'anime', artist: 'artist' };
 
 export function Collections({
   catalog,
@@ -41,11 +46,15 @@ export function Collections({
                 <b>{group.title}</b>
                 <span className="muted small">
                   {' '}
-                  · {all.length} games · {have} in library
+                  ·{' '}
+                  {DOMAIN_KIND[group.domain ?? 'game']
+                    ? titlesLabel(all.map(() => ({ kind: DOMAIN_KIND[group.domain ?? 'game'] })))
+                    : `${all.length.toLocaleString()} titles`}{' '}
+                  · {have} in library
                 </span>
                 <div className="muted small">{group.description}</div>
               </div>
-              <label className="check small" title="When the monthly update finds new games in this collection, import them">
+              <label className="check small" title="When the weekly update finds new titles in this collection, import them">
                 <input
                   type="checkbox"
                   checked={subscribed}
@@ -97,7 +106,7 @@ export function Collections({
           <>{update.message}</>
         ) : (
           <>
-            {nextCheck && <>Next check for new games {new Date(nextCheck).toLocaleDateString()}. </>}
+            {nextCheck && <>Next check for new titles {new Date(nextCheck).toLocaleDateString()}. </>}
             {update.message && <>{update.message} </>}
             <button className="link" onClick={() => runUpdate(true)}>
               check now

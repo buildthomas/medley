@@ -24,11 +24,12 @@ async function start() {
     .then(transferFromOldOrigin)
     .catch((e) => console.error('Moving your library to the new storage failed; your old data is untouched.', e));
 
-  // A hosted, invite-only Medley asks you to sign in first (never locally).
+  // A hosted, invite-only Medley shows only its home page, with sign-in, until you're in
+  // (never locally).
   const auth = await checkAuth();
   if (auth.required && !auth.user) {
-    const { SignIn } = await import('./components/SignIn');
-    root.render(<SignIn onSignedIn={showApp} />);
+    const { Home } = await import('./components/Home');
+    root.render(<Home signInRequired onSignedIn={showApp} />);
     return;
   }
   await showApp();

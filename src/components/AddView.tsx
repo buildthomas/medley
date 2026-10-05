@@ -60,7 +60,7 @@ export function AddView() {
     try {
       const added = await commitDraft(draft);
       const games = draft.groups.filter((g) => g.tracks.some((t) => t.include)).length;
-      setMessage(`Saved ${added} new tracks across ${games} game${games === 1 ? '' : 's'}.`);
+      setMessage(`Saved ${added} new tracks across ${games} title${games === 1 ? '' : 's'}.`);
       setDraft(null);
       if (queue.length) {
         const [nextLink, ...rest] = queue;
@@ -235,7 +235,7 @@ export function AddView() {
               <div className="draft-game">
                 <input list="catalog-titles" value={g.title} onChange={(e) => renameGroup(gi, e.target.value)} />
                 <span className={g.catalogId ? 'badge ok' : 'badge'}>
-                  {g.catalogId ? 'matched in catalog' : 'custom game'}
+                  {g.catalogId ? 'matched in catalog' : 'custom title'}
                 </span>
                 <label className="check">
                   <input

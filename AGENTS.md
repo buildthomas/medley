@@ -10,8 +10,11 @@ MusicBrainz search). Internally a "game" (`Game`, `CatalogGame`) means any *work
 Storage is named `medley` (IndexedDB) and `medley:*` (localStorage). Libraries from before the
 rename are copied over once on load (`src/migrate.ts`); the old `vgm-shuffle` copies stay as a backup.
 
-This file is the 2-minute orientation. Go deeper through [docs/README.md](docs/README.md), which
-lists every doc with a one-line summary. Read only what your task needs.
+This file is the 2-minute orientation. **Before your first change, read
+[docs/development.md](docs/development.md)**: how to verify changes without a test suite, the
+conventions (wording, track ids, mobile CSS), and the product decisions already made with the
+owner. Then go deeper through [docs/README.md](docs/README.md), which lists every doc with a
+one-line summary. Read only what your task needs.
 
 ## Run it
 
@@ -27,7 +30,7 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
 
 | Path | What lives there |
 |---|---|
-| `src/` | React 19 + TypeScript client. Entry `main.tsx` (storage migrations, sign-in) → `App.tsx` (tabs: Discover, Listen, Library, Add link) |
+| `src/` | React 19 + TypeScript client. Entry `main.tsx` (storage migrations, sign-in gate) → `App.tsx` (Home via the logo; tabs: Discover, Listen, Library, Add link) |
 | `src/lib/` | Logic without UI: shuffle (`picker.ts`), importing (`importer.ts`, `importers/anime.ts`, `importers/artist.ts`, `parse.ts`), catalog (`catalog.ts`), search, background jobs (`bulk.ts`, `updater.ts`, `sync.ts`) |
 | `src/components/` | Views; `discover/` holds the cover-art browsing UI |
 | `src/data/` | **Generated, committed** public catalogs (`catalog.json` games, `screen.json`, `anime.json`, `artists.json`, `collections.json`). Rebuilt by `npm run catalog` |

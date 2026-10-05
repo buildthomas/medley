@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { db } from '../db';
 import { primaryLink, useCatalog } from '../lib/catalog';
+import { kindLabel, kindOf } from '../lib/kinds';
 import { useMediaSession } from '../lib/mediaSession';
 import { pipSupported, usePopOut } from './PopOutPlayer';
 import { TRACK_TYPES } from '../lib/parse';
@@ -27,12 +28,38 @@ export function ListenView({
   const player = useRef<PlayerHandle>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState<{ t: number; len: number | null }>({ t: 0, len: null });
+  // Where the progress bar was last drawn (to tell smooth playback from jumps).
+  const lastBarT = useRef(0);
+  useEffect(() => {
+    lastBarT.current = progress.t;
+  });
   const [notice, setNotice] = useState<string | null>(null);
   const cat = useCatalog();
   const catGame = currentGame ? cat?.byId.get(currentGame.id) : undefined;
   // Clicking the title (or cover) of what's playing opens its page right here.
   const [showWork, setShowWork] = useState(false);
   const work = catGame ?? (currentGame ? { ...currentGame, franchise: currentGame.franchise ?? undefined, pop: 0 } : undefined);
+
+  // Phones: YouTube's embedded player pauses itself when the screen locks or you switch apps
+  // (background play is a YouTube Premium feature, so we don't fight it). When you come back,
+  // pick up where it stopped if it was playing when you left.
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
+  const pausedByUser = useRef(false); // e.g. the lock-screen pause button while away
+  useEffect(() => {
+    let wasPlaying = false;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        wasPlaying = playingRef.current;
+        pausedByUser.current = false;
+      } else if (wasPlaying && !playingRef.current && !pausedByUser.current) {
+        wasPlaying = false;
+        setTimeout(() => !playingRef.current && player.current?.play(), 300);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   // Lets the header logo dance along (see .logo-mark in styles.css).
   useEffect(() => {
@@ -71,7 +98,10 @@ export function ListenView({
     },
     {
       play: () => (current ? player.current?.play() : session.next()),
-      pause: () => player.current?.pause(),
+      pause: () => {
+        pausedByUser.current = true;
+        player.current?.pause();
+      },
       next: skip,
       previous: session.prev,
     },
@@ -144,10 +174,10 @@ export function ListenView({
     return (
       <Empty>
         <h2>Your library is empty</h2>
-        <p>Pick games from the catalog and Medley will find their music on YouTube.</p>
+        <p>Pick games, anime, films or artists in Discover and Medley finds their music on YouTube.</p>
         <div className="row-actions center">
           <button className="primary" onClick={() => goTo('discover')}>
-            Browse games
+            Open Discover
           </button>
           <button onClick={() => goTo('add')}>Paste a playlist link</button>
         </div>
@@ -162,7 +192,7 @@ export function ListenView({
     .filter((x) => x.t);
 
   return (
-    <div className="listen">
+    <div className={`listen ${current ? '' : 'idle'}`}>
       <div className="stage">
         <div className="video-frame">
           <YouTubePlayer
@@ -237,7 +267,7 @@ export function ListenView({
                   rel="noreferrer"
                   title={`${currentGame?.title} on ${link.label}`}
                 >
-                  {link.label === 'Wikipedia' ? 'About the game' : `Get it on ${link.label}`} ↗
+                  {link.label === 'Wikipedia' ? `About the ${kindLabel(kindOf(currentGame!)).one}` : `Get it on ${link.label}`} ↗
                 </a>
               )}
             </div>
@@ -250,10 +280,19 @@ export function ListenView({
               onClick={(e) => {
                 if (!progress.len) return;
                 const r = e.currentTarget.getBoundingClientRect();
-                player.current?.seek(((e.clientX - r.left) / r.width) * progress.len);
+                const t = ((e.clientX - r.left) / r.width) * progress.len;
+                player.current?.seek(t);
+                setProgress({ t, len: progress.len }); // move the bar now, not at the next poll
               }}
             >
-              <div style={{ width: progress.len ? `${Math.min(100, (100 * progress.t) / progress.len)}%` : 0 }} />
+              {/* The width animates between the twice-a-second updates, but jumps (seeking, a
+                  new track) snap instead of sliding there. */}
+              <div
+                style={{
+                  width: progress.len ? `${Math.min(100, (100 * progress.t) / progress.len)}%` : 0,
+                  transition: Math.abs(progress.t - lastBarT.current) > 1.5 ? 'none' : undefined,
+                }}
+              />
             </div>
             <span className="muted tabular">
               {formatTime(progress.t)} / {formatTime(progress.len)}
@@ -328,9 +367,9 @@ export function ListenView({
               await db.games.update(currentGame.id, { enabled: false });
               session.next();
             }}
-            title="Take this game out of rotation (re-enable it under Games)"
+            title={`Take this ${currentGame ? kindLabel(kindOf(currentGame)).one : 'title'} out of rotation (turn it back on under Titles in the filters)`}
           >
-            Pause game
+            Pause {currentGame ? kindLabel(kindOf(currentGame)).one : 'title'}
           </button>
         </div>
       </div>

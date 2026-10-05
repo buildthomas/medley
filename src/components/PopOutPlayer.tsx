@@ -20,7 +20,10 @@ declare global {
   }
 }
 
-export const pipSupported = () => typeof window !== 'undefined' && 'documentPictureInPicture' in window;
+// Desktop only: on phones and tablets the OS's lock-screen / notification media controls (fed by
+// lib/mediaSession.ts) are the native equivalent.
+export const pipSupported = () =>
+  typeof window !== 'undefined' && 'documentPictureInPicture' in window && !matchMedia('(pointer: coarse)').matches;
 
 export interface PopOutState {
   title: string | null;

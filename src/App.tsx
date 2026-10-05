@@ -4,6 +4,7 @@ import { DiscoverView } from './components/DiscoverView';
 import { FiltersPanel } from './components/FiltersPanel';
 import { LibraryView } from './components/LibraryView';
 import { BulkStatus } from './components/BulkStatus';
+import { Home } from './components/Home';
 import { Logo } from './components/Logo';
 import { NewArrivals } from './components/NewArrivals';
 import { ListenView } from './components/ListenView';
@@ -15,7 +16,7 @@ import { ensureMyGames, resumeInterrupted, runUpdate, syncLibraryMeta } from './
 import type { Filters } from './types';
 import { useSession } from './useSession';
 
-type Tab = 'listen' | 'library' | 'discover' | 'add';
+type Tab = 'home' | 'listen' | 'library' | 'discover' | 'add';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'discover', label: 'Discover' },
   { id: 'listen', label: 'Listen' },
@@ -26,7 +27,7 @@ const TABS: { id: Tab; label: string }[] = [
 export function App() {
   const [tab, setTabState] = useState<Tab>(() => {
     const t = readUrlState().tab;
-    return TABS.some((x) => x.id === t) ? (t as Tab) : 'discover';
+    return t === 'home' || TABS.some((x) => x.id === t) ? (t as Tab) : 'discover';
   });
   const setTab = (t: Tab) => {
     setTabState(t);
@@ -64,7 +65,7 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <button className="brand" onClick={() => setTab('discover')} title="Discover">
+        <button className="brand" onClick={() => setTab('home')} title="Home">
           <Logo /> <span className="wordmark">medley</span>
         </button>
         <nav>
@@ -79,6 +80,7 @@ export function App() {
 
       <main>
         {(tab === 'listen' || tab === 'discover') && <NewArrivals session={session} onBrowse={() => setTab('discover')} />}
+        {tab === 'home' && <Home onNavigate={setTab} />}
         {tab === 'library' && <LibraryView session={session} />}
         {tab === 'discover' && <DiscoverView session={session} />}
         {tab === 'add' && <AddView />}

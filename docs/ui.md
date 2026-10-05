@@ -1,7 +1,8 @@
 # UI
 
-**Summary:** four tabs in `App.tsx`: Discover (default; the logo links to it), Listen, Library,
-Add link. The Listen view (player) stays mounted on every tab and
+**Summary:** `App.tsx` has a Home page (the logo opens it: tagline, what Medley is, and on a
+hosted Medley the sign-in form) and four tabs: Discover (the default), Listen, Library, Add link.
+Every screen must work at 375 px wide; see *Phones* below. The Listen view (player) stays mounted on every tab and
 docks as a mini player, so music never stops. Discover is the cover-art browser (shelves,
 grid with facets, franchises, game detail modal). Styling is plain CSS with design tokens;
 dark by default with a light theme via `prefers-color-scheme`.
@@ -84,7 +85,26 @@ One row: domain tabs + search; below it the view switch (For you / Browse all / 
 asks for persistent storage once a library exists (`lib/storage.ts`); the Backup card shows the
 status and usage, with a button to ask again.
 
-## Sign-in (hosted only)
+## Home and sign-in
 
-`SignIn.tsx` replaces the app when `/api/session` says sign-in is required and nobody is signed
-in; a 401 from any API call reloads into it. The Backup card shows who's signed in and *Sign out*.
+`Home.tsx` is the landing page: pitch, the four domains, features. Locally it offers *Discover
+music* / *Start listening*. On a hosted Medley where `/api/session` says sign-in is required and
+nobody is signed in, `main.tsx` renders only `Home` (logo, no tabs) with the sign-in form; a 401
+from any API call reloads into it. The Backup card shows who's signed in and *Sign out*.
+
+## Phones
+
+- Docked player: a 200×200 video beside title and controls (~218 px tall); a slim bar when
+  nothing is loaded. Volume slider hidden (hardware buttons), pop-out hidden (touch devices).
+- Title pages are full-screen sheets; chip rows (domain tabs, view switch) scroll sideways; the
+  new-arrivals banner is compact.
+- Touch: hover affordances always visible, 16 px inputs, safe-area insets, no autofocus that
+  would pop the keyboard.
+- Playback stops when the phone locks or switches apps (YouTube's embed does that); when the page
+  becomes visible again it resumes if it was playing and wasn't paused from the lock screen.
+
+## Progress bar
+
+The fill animates between the twice-a-second position updates, but snaps on jumps (a seek, a
+new track): `transition: none` when the position moved more than 1.5 s. A click moves the bar
+immediately instead of waiting for the next update.

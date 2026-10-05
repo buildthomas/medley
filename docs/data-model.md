@@ -54,7 +54,7 @@ settings over once, when the new one is empty (`medley:origin-transfer` records 
 | Table | Key | Purpose |
 |---|---|---|
 | `games` | `id` (= catalog id) | A work in the library. `enabled` = in rotation. `kind`, `franchise`, `platforms`, `keywords` copied from the catalog for filtering (synced at start-up by `syncLibraryMeta`) |
-| `tracks` | `id` = `videoId`, or `videoId@start` for a slice | `start`/`end` for slices, `duration`, `types`, `liked`, `banned`, `unavailable`, `playCount`, `skipCount`, plus: `vocal` (sung?), `role` (`op`/`ed`/`insert`/`score`/`song`), `seq` (OP2 → 2), `artist`, `customTitle` (user renamed; source sync won't overwrite) |
+| `tracks` | `id` = `videoId`, `videoId@start` for a slice, `…~<gameId>` when the same video also belongs to another title | `start`/`end` for slices, `duration`, `types`, `liked`, `banned`, `unavailable`, `playCount`, `skipCount`, plus: `vocal` (sung?), `role` (`op`/`ed`/`insert`/`score`/`song`), `seq` (OP2 → 2), `artist`, `customTitle` (user renamed; source sync won't overwrite) |
 | `sources` | playlist/video id | Where tracks came from; `gameIds` it fed; `kind` `playlist`/`video`/`search` (individually found videos, e.g. anime themes); `syncedAt` |
 | `plays` | auto-increment | Play history (`skipped` = skipped early). Picker reads the last 400 |
 | `meta` | `key` | Durable app state (below) |

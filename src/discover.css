@@ -762,7 +762,79 @@ button.inline-link {
   flex-wrap: wrap;
 }
 @media (max-width: 760px) {
+  /* Phones: covers beside the text, actions underneath; about half the height. */
   .arrivals {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px 14px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .arrivals-cover {
+    width: 40px;
+    margin-left: -16px;
+  }
+  .arrivals-text h2 {
+    font-size: 15px;
+  }
+  .arrivals-actions {
+    grid-column: 1 / -1;
+  }
+  .arrivals-actions button {
+    padding: 6px 12px;
+  }
+}
+
+/* Phones: rows of chips scroll sideways instead of wrapping into a wall of buttons. */
+@media (max-width: 700px) {
+  .discover-hero {
+    padding-top: 8px;
+  }
+  .domain-tabs,
+  .mode-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+  .domain-tabs::-webkit-scrollbar,
+  .mode-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .domain-tabs button,
+  .mode-tabs > * {
+    flex: none;
+  }
+  /* Grid/flex items default to their content's width; let these shrink and scroll instead. */
+  .discover-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .discover-hero > *,
+  .discover-top > * {
+    min-width: 0;
+  }
+  .discover-top .domain-tabs {
+    flex: 1 1 100%;
+  }
+  .discover-top .search.big {
+    flex-basis: 100%;
+  }
+}
+
+/* Phones: a title's page is a full-screen sheet rather than a floating card. */
+@media (max-width: 700px) {
+  .modal-backdrop {
+    padding: 0;
+  }
+  .detail {
+    min-height: 100dvh;
+    border-radius: 0;
+    border: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .detail-close {
+    position: fixed;
+    top: calc(10px + env(safe-area-inset-top));
+    z-index: 2;
   }
 }

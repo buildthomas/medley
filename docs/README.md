@@ -5,6 +5,7 @@ short summary so you can stop early.
 
 | Doc | Read it when you… |
 |---|---|
+| [development.md](development.md) | start working here: the loop, how to verify changes, conventions, decisions already made |
 | [architecture.md](architecture.md) | need the big picture: processes, data flow, which module owns what |
 | [data-model.md](data-model.md) | touch stored data: IndexedDB tables, catalog entries, URL/localStorage keys |
 | [data-pipeline.md](data-pipeline.md) | work on the catalogs (games, film & TV, anime, artists), collections, covers/tags, or the weekly update |
@@ -16,7 +17,7 @@ short summary so you can stop early.
 | [gotchas.md](gotchas.md) | hit something weird. Known traps and their fixes |
 | [roadmap.md](roadmap.md) | look for what to build next, or why something isn't built |
 
-Conventions in these docs: paths are relative to the repo root; "the server" means the Vite dev
-server with the `/api` plugin (`server/plugin.ts`); "the catalog" means `CatalogGame[]`
+Conventions in these docs: paths are relative to the repo root; "the server" means the `/api`
+routes (`server/api.ts`, run by the dev server or `server/serve.ts`); "the catalog" means `CatalogGame[]`
 (public metadata for every domain), "the library" means the user's IndexedDB (works they
 imported). "Game" in code means any work (game, film, series, anime, artist); see `kind`.

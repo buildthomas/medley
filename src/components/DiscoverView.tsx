@@ -108,6 +108,7 @@ export function DiscoverView({ session }: { session: Session }) {
 
   function setDomain(d: Domain) {
     setDomainState(d);
+    if (d === 'artist') setMode((m) => (m === 'franchises' ? 'home' : m)); // artists have no series
     setFacets({});
     setFocus(null);
     try {
@@ -475,7 +476,7 @@ export function DiscoverView({ session }: { session: Session }) {
             [
               ['home', 'For you'],
               ['browse', 'Browse all'],
-              ['franchises', 'Series & franchises'],
+              ...(domain === 'artist' ? [] : [['franchises', 'Series & franchises']]),
             ] as [Mode, string][]
           ).map(([m, label]) => (
             <button key={m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>

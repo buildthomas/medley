@@ -145,6 +145,14 @@ export function isUpcoming(game: Pick<CatalogGame, 'date' | 'year'>, now = new D
 }
 
 /** Franchise if known, else series: the grouping used for "Series & franchises". */
+/**
+ * Wikidata's "part of the series" for films is often a list, not a series ("list of Pixar films",
+ * "Walt Disney Animation Studios feature film", "BBC's 100 Greatest Films…"). Those aren't
+ * franchises. (scripts/screen-builder.mjs drops them too; this covers older catalogs.)
+ */
+export const NOT_A_SERIES = /^list of |\bfeature films?$|\bproductions$|\b(greatest|best)\b.*\bfilms?\b|\btop \d+\b/i;
+
 export function franchiseOf(game: CatalogGame): string | null {
-  return game.franchise ?? game.series ?? null;
+  const ok = (name: string | null | undefined) => (name && !NOT_A_SERIES.test(name) ? name : null);
+  return ok(game.franchise) ?? ok(game.series);
 }

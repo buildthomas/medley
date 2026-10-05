@@ -124,6 +124,14 @@ them with `runBulk(…, { topUp: true })`, which doesn't skip titles already in 
 - `addSong(song)` files it under the artist (`artistWork`: a catalog artist when the name
   matches, else a new `u:artist-<slug>` work).
 
+### Saving (`commitDraft`)
+
+Re-importing a video that's already a track of this title keeps plays, likes and a user-given
+title, and takes the new import's role, seq, artist and vocal flag. A video that's already a track
+of a *different* title (LiSA's "Gurenge" as an artist song and as Demon Slayer's opening) gets a
+second row `videoId~<gameId>`, so both titles keep it. `syncLibraryMeta` also repairs anime
+tracks whose title matches a listed theme but lack the role (older imports).
+
 ### Source sync (`src/lib/sync.ts`)
 
 Weekly: playlist sources of single-work imports are re-read (cached `draftFromLink`). New videos

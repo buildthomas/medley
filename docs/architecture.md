@@ -28,7 +28,7 @@ coordinate through files in the data dir. Data and config directories are outsid
 
 Start-up in the browser (`src/main.tsx`): copy a library from old storage names / the old :5173
 address (`migrate.ts`, `lib/originTransfer.ts`) → ask the server whether sign-in is needed
-(`lib/auth.ts`, shows `SignIn`) → load `App`.
+(`lib/auth.ts`; if so, only `Home` with its sign-in form is shown, no tabs) → load `App`.
 
 `scripts/import-headless.ts` is a third mode: it runs the client's import code in Node against an
 in-memory IndexedDB (`fake-indexeddb`) and the running dev server, then writes a backup file.

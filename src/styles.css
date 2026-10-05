@@ -235,7 +235,7 @@ kbd {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
-button.brand {
+.brand {
   font-weight: 700;
   font-size: 16px;
   display: flex;
@@ -889,7 +889,8 @@ tr.excluded {
     flex-wrap: wrap;
   }
   main {
-    padding: 16px 16px 400px; /* room for the docked player */
+    /* room for the docked player (and the home indicator on notched phones) */
+    padding: 16px 16px calc(250px + env(safe-area-inset-bottom));
   }
   .side-lists {
     grid-template-columns: 1fr;
@@ -901,20 +902,69 @@ tr.excluded {
     grid-template-columns: auto auto 30px minmax(0, 1fr) auto;
   }
   .listen-layout.compact {
-    left: 16px;
-    right: 16px;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
     width: auto;
+    padding: 8px;
   }
-  /* Phones: one row of controls (hardware buttons do volume), no second cover next to the video. */
+  /* Phones: the docked player is a 200×200 video (YouTube's minimum) beside the title and
+     controls, ~216px tall; hardware buttons do volume. With nothing loaded it's a slim bar. */
   .compact .volume,
-  .compact .now-cover {
+  .compact .now-cover,
+  .compact .notice {
     display: none;
   }
-  /* Phones: full width, never shorter than YouTube's 200px minimum. */
+  .compact .stage {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-areas: 'video now' 'video controls';
+    gap: 6px 10px;
+    align-items: start;
+  }
   .compact .video-frame {
-    width: 100%;
+    grid-area: video;
+    width: 200px;
+    height: 200px;
     aspect-ratio: auto;
-    height: max(200px, calc((100vw - 52px) * 9 / 16));
+  }
+  .compact .now {
+    grid-area: now;
+    gap: 4px;
+  }
+  .compact .now-title,
+  .compact .now-game {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .compact .progress .muted {
+    font-size: 11px;
+  }
+  .compact .controls {
+    grid-area: controls;
+    align-self: end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .compact .controls > button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .compact .controls .spacer {
+    display: none;
+  }
+  .compact .listen.idle .video-frame {
+    display: none;
+  }
+  .compact .listen.idle .stage {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'now controls';
+    align-items: center;
+  }
+  .compact .listen.idle .progress {
+    display: none;
   }
   td.types {
     display: none;
@@ -1240,32 +1290,136 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- sign-in (hosted, invite-only) ---------- */
-.signin {
-  min-height: 100vh;
+/* ---------- home (and sign-in on a hosted Medley) ---------- */
+.home {
   display: grid;
-  place-items: center;
-  padding: 16px;
-  background: radial-gradient(80% 60% at 50% 0%, var(--accent-soft), transparent 70%), var(--bg);
+  gap: 36px;
+  padding: 24px 0 48px;
+}
+.home-gate {
+  min-height: 100dvh;
+  padding: 0 0 48px;
+  background: radial-gradient(90% 50% at 50% 0%, var(--accent-soft), transparent 70%), var(--bg);
+}
+.home-gate > :not(.topbar) {
+  width: min(1120px, 100% - 32px);
+  margin-inline: auto;
+}
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: 32px;
+  align-items: center;
+  padding-top: 24px;
+}
+.home:not(.home-gate) .home-hero {
+  grid-template-columns: minmax(0, 1fr);
+}
+.home-pitch {
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+}
+.home h1 {
+  margin: 0;
+  font-size: clamp(34px, 6vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}
+.home h1 .dim {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.home-lede {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0;
+}
+button.big {
+  padding: 10px 18px;
+  font-size: 15px;
+  border-radius: 10px;
+}
+.home-domains {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+.home-domain {
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.home-domain-icon {
+  font-size: 26px;
+}
+.home-domain h2 {
+  font-size: 17px;
+}
+.home-domain p,
+.home-features p {
+  margin: 0;
+  line-height: 1.5;
+}
+.home-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 18px 24px;
+}
+.home-features h3 {
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.home-foot {
+  margin: 0;
 }
 .signin-card {
-  width: min(360px, 100%);
   display: grid;
   gap: 12px;
-  padding: 28px;
+  padding: 24px;
   border-radius: 16px;
   background: var(--bg-raised);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
-.signin-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.signin-brand .wordmark {
-  font-size: 26px;
+.signin-card h2 {
+  font-size: 20px;
 }
 .signin-card input {
-  padding: 10px 12px;
+  padding: 11px 12px;
+}
+@media (max-width: 760px) {
+  .home-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 8px;
+  }
+}
+
+/* ---------- touch screens ---------- */
+@media (hover: none) {
+  /* No hover on touch: actions that appear on hover are always shown. */
+  .tile-action {
+    opacity: 1;
+  }
+}
+@media (pointer: coarse) {
+  /* iOS zooms into inputs smaller than 16px when they get focus. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

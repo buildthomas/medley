@@ -13,9 +13,10 @@
 
 import { useSyncExternalStore } from 'react';
 import { db, getMeta, setMeta } from '../db';
-import type { CatalogGame } from '../types';
+import type { CatalogGame, Track } from '../types';
 import { resumeBulk, runBulk, type Arrivals } from './bulk';
 import { gameMetaFrom } from './importer';
+import { normalize } from './parse';
 import { isUpcoming, loadCatalog, reloadCatalog, type Collections } from './catalog';
 import { syncSources } from './sync';
 
@@ -96,6 +97,36 @@ export async function syncLibraryMeta() {
       changes.push({ key: g.id, changes: meta });
   }
   if (changes.length) await db.games.bulkUpdate(changes);
+  await repairThemeRoles(games.filter((g) => g.kind === 'anime').map((g) => byId.get(g.id)).filter((g): g is CatalogGame => !!g));
+}
+
+/**
+ * Anime songs imported without their role (before commitDraft merged roles into existing tracks,
+ * e.g. an opening that was already in the library as an artist's song): give tracks whose title
+ * is one of the anime's listed themes their OP/ED/insert role back.
+ */
+async function repairThemeRoles(animes: CatalogGame[]) {
+  const updates: { key: string; changes: Partial<Track> }[] = [];
+  for (const anime of animes) {
+    if (!anime.themes?.length) continue;
+    const tracks = await db.tracks.where('gameId').equals(anime.id).toArray();
+    for (const t of tracks) {
+      if (t.role && t.role !== 'song' && t.role !== 'score') continue;
+      const title = normalize(t.title);
+      const theme = anime.themes.find((th) => normalize(th.song) === title);
+      if (!theme) continue;
+      updates.push({
+        key: t.id,
+        changes: {
+          role: theme.type === 'OP' ? 'op' : theme.type === 'ED' ? 'ed' : 'insert',
+          ...(theme.seq != null ? { seq: theme.seq } : {}),
+          vocal: true,
+          ...(t.artist ? {} : theme.artists.length ? { artist: theme.artists.join(', ') } : {}),
+        },
+      });
+    }
+  }
+  if (updates.length) await db.tracks.bulkUpdate(updates);
 }
 
 /** Import entries from my-games.json that haven't been imported before (once each, so deleting one sticks). */

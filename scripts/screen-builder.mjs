@@ -114,6 +114,9 @@ async function collectIds(log) {
   return { pop, kind, studioOf, musicals };
 }
 
+// Same rule as NOT_A_SERIES in src/lib/catalog.ts.
+const NOT_A_SERIES = /^list of |\bfeature films?$|\bproductions$|\b(greatest|best)\b.*\bfilms?\b|\btop \d+\b/i;
+
 export async function buildScreen({ log = console.log } = {}) {
   const { pop, kind, studioOf, musicals } = await collectIds(log);
   const ids = [...pop.keys()];
@@ -158,7 +161,8 @@ export async function buildScreen({ log = console.log } = {}) {
       }
       if (r.genre) w.genres.add(r.genre.value);
       if (r.composer) w.composers.add(r.composer.value);
-      if (r.series) w.series ??= r.series.value;
+      // "Part of the series" is often a list ("list of Pixar films", "BBC's 100 Greatest…"): skip those.
+      if (r.series && !NOT_A_SERIES.test(r.series.value)) w.series ??= r.series.value;
       if (r.franchise) w.franchise ??= r.franchise.value.replace(/\s*\((media )?franchise\)$/i, '');
       if (r.studio) w.studios.add(r.studio.value);
       if (r.network) w.networks.add(r.network.value);

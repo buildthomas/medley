@@ -285,15 +285,29 @@ export async function commitDraft(draft: ImportDraft): Promise<number> {
       };
       await db.games.put(game);
 
-      const ids = included.map((t) => t.key);
+      // A video already filed under another title (an artist's song that is also an anime's
+      // opening, a song on two soundtracks) gets its own row for this title, `<key>~<gameId>`,
+      // so both titles keep it.
+      const first = await db.tracks.bulkGet(included.map((t) => t.key));
+      const ids = included.map((t, i) => (first[i] && first[i]!.gameId !== gameId ? `${t.key}~${gameId}` : t.key));
       const existing = await db.tracks.bulkGet(ids);
       const rows: Track[] = included.map((t, i) => {
         const prev = existing[i];
-        // Re-importing keeps plays/likes, and a name you gave the track yourself.
-        if (prev) return { ...prev, gameId, title: prev.customTitle ? prev.title : t.title, types: t.types };
+        // Re-importing keeps plays/likes and a name you gave the track yourself, and takes what
+        // the new import knows better (an anime theme's role and number, the performer).
+        if (prev)
+          return {
+            ...prev,
+            title: prev.customTitle ? prev.title : t.title,
+            types: t.types,
+            ...(t.role ? { role: t.role } : {}),
+            ...(t.seq != null ? { seq: t.seq } : {}),
+            ...(t.vocal != null ? { vocal: t.vocal } : {}),
+            ...(t.artist ? { artist: t.artist } : {}),
+          };
         added++;
         return {
-          id: t.key,
+          id: ids[i],
           gameId,
           videoId: t.videoId,
           title: t.title,

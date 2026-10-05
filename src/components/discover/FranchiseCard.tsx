@@ -1,3 +1,4 @@
+import { titlesLabel } from '../../lib/kinds';
 import type { CatalogGame } from '../../types';
 import { Cover } from './Cover';
 
@@ -22,7 +23,7 @@ export function FranchiseCard({ franchise, onOpen }: { franchise: Franchise; onO
       <div className="franchise-meta">
         <span className="tile-title">{franchise.name}</span>
         <span className="tile-sub">
-          {franchise.games.length} games{franchise.owned ? ` · ${franchise.owned} in library` : ''}
+          {titlesLabel(franchise.games)}{franchise.owned ? ` · ${franchise.owned} in library` : ''}
         </span>
       </div>
     </button>

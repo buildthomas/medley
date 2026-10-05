@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { db, deleteGame } from '../db';
 import { primaryLink, useCatalog } from '../lib/catalog';
+import { kindLabel, kindOf, titlesLabel } from '../lib/kinds';
 import { foreignTitleRatio, preferEnglishSource } from '../lib/importer';
 import { TRACK_TYPES } from '../lib/parse';
 import { buildIndex, search } from '../lib/search';
@@ -65,10 +66,10 @@ export function LibraryView({ session }: { session: Session }) {
         /* keep the current source */
       }
     }
-    setFixing(`Switched ${fixed} of ${foreign.length} games to English track names; the rest only exist in their original language.`);
+    setFixing(`Switched ${fixed} of ${titlesLabel(foreign)} to English track names; the rest only exist in their original language.`);
   }
 
-  if (!games.length) return <Empty>No games yet. Add some from Discover or Add link.</Empty>;
+  if (!games.length) return <Empty>Nothing here yet. Add titles from Discover, or paste a link under Add link.</Empty>;
 
   return (
     <div className="library">
@@ -81,11 +82,11 @@ export function LibraryView({ session }: { session: Session }) {
           <option value="year">Release year</option>
         </select>
         <span className="muted">
-          {games.length} games · {tracks.length.toLocaleString()} tracks
+          {titlesLabel(games)} · {tracks.length.toLocaleString()} tracks
         </span>
         {foreign.length > 0 && !fixing && (
           <button className="link" onClick={fixForeign} title={foreign.map((g) => g.title).join(', ')}>
-            {foreign.length} games have non-English track names: find English versions
+            {titlesLabel(foreign)} {foreign.length === 1 ? 'has' : 'have'} non-English track names: find English versions
           </button>
         )}
         {fixing && <span className="small">{fixing}</span>}
@@ -181,7 +182,7 @@ function GameEditor({
           className="danger"
           onClick={() => confirm(`Remove ${game.title} and its ${tracks.length} tracks from your library?`) && deleteGame(game.id)}
         >
-          Remove game
+          Remove {kindLabel(kindOf(game)).one}
         </button>
       </div>
       <table className="lib-tracks">

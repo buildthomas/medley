@@ -84,7 +84,9 @@ remaining queue is stored and resumes on the next start.
 
 ## Using it
 
-Tabs: **Discover** (the start page; the logo leads back to it), **Listen**, **Library**, **Add link**.
+The logo opens **Home** (what Medley is; on a hosted, invite-only Medley also the sign-in, with
+everything else hidden until you're in). Tabs: **Discover** (where you land), **Listen**,
+**Library**, **Add link**.
 
 - **Discover:** cover-art shelves per domain (*Everything, Games, Anime, Film & TV, Artists*),
   a filterable *Browse all* grid, and *Series & franchises*. Search covers the catalogs, your
@@ -103,6 +105,11 @@ Tabs: **Discover** (the start page; the logo leads back to it), **Listen**, **Li
 
 Medley can be installed as an app (Chrome/Edge: the install icon in the address bar). That
 also makes browsers more willing to keep its storage permanently.
+
+**On phones** everything works at phone width: a compact docked player, full-screen title pages,
+and lock-screen controls. Music stops when the phone locks or you switch apps (YouTube's embedded
+player does that; background play is a YouTube Premium feature) and picks up again when you come
+back. On a desktop, a minimized or background browser window keeps playing.
 
 Keys: <kbd>Space</kbd> play/pause, <kbd>N</kbd>/<kbd>→</kbd> skip, <kbd>P</kbd>/<kbd>←</kbd> back,
 <kbd>L</kbd> like, <kbd>B</kbd> never play, <kbd>↑</kbd>/<kbd>↓</kbd> volume, <kbd>M</kbd> mute.

@@ -11,9 +11,14 @@
 - **Track-type tagging** is keyword-based; ~half of tracks get no type. An optional LLM pass could
   tag untagged titles in batches.
 - **Duplicate soundtracks** across a game and its remaster aren't merged.
-- **Mobile background playback** isn't possible with the YouTube iframe (screen lock pauses it).
+- **Mobile background playback** isn't possible with the YouTube iframe (YouTube pauses hidden
+  embeds; background play is a Premium feature). We resume on return instead.
 - **Static hosting** would need the `/api` functions as serverless functions (see operations.md).
 - **Mood/energy tags** (calm, intense, upbeat): skipped for now. Could come from track types +
   title keywords, or an optional LLM pass.
 - **More domains** (e.g. classical, musicals as their own domain): add a builder in `scripts/`,
   a `kind` in `src/lib/kinds.ts`, and an importer in `src/lib/importers/`.
+- **Wikidata series noise** for films is filtered by `NOT_A_SERIES` (catalog.ts, screen-builder);
+  new list-like names may need adding.
+- **Library sync across devices** (hosted): would need server-side storage per user; today
+  libraries move by Backup/Restore.

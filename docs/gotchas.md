@@ -75,3 +75,11 @@
     testing `npm run serve` next to `npm run dev`.
 30. **Refresh stuck "running" after a crash** → the lock has a 30 s heartbeat and goes stale after
     2 minutes; an interrupted run isn't backed off like a failure.
+31. **Anime OP/ED tags missing after import** → the video was already a track (often of an artist),
+    and `commitDraft` used to keep the old row untouched. It now merges role/seq/artist/vocal and
+    gives a second title its own `~<gameId>` row; `syncLibraryMeta` repairs older libraries.
+32. **Phone page wider than the screen** → a `nowrap` scrolling row inside a grid/flex item with
+    the default `min-width: auto` widens the whole layout (Chrome then zooms the page out). Give
+    those containers `min-width: 0`.
+33. **Film "franchises" like "list of Pixar films"** → Wikidata P179 often points at lists;
+    filtered by `NOT_A_SERIES`.
