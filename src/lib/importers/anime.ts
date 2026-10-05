@@ -18,6 +18,11 @@ const BAD =
   /\bcover\b|reaction|piano|\blyrics?\b|karaoke|nightcore|slowed|sped up|\b8d\b|\bhours?\b|\bloop\b|\bamv\b|\bedit\b|fan ?made|tutorial|guitar|drum|bass cover|remix|\bmashup\b|instrumental|off vocal|8-bit|music box|orchestral|sheet music|\b(only|just) (bass|drums?|vocals?)\b|\blyre\b|ocarina|kalimba|violin|\bflute\b|\bsax(ophone)?\b|fan animation|animatic|genshin|roblox|minecraft|beat ?saber|\bosu!?(?=\s|$)|gameplay|\btaiko\b|歌ってみた|弾いてみた|叩いてみた|演奏してみた|カバー|切り抜き|ピアノ|ベース/i;
 const CREDITLESS = /creditless|non-?credit|\bnc(op|ed)\b|clean (opening|ending)/i;
 const OFFICIAL = /official|\bmv\b|music video|- topic$/i;
+// Translated versions are covers ("English Version", "Kimi no Sei (English Cover)", "Eng Ver."),
+// unless the song itself is listed in that language.
+// ("English sub(title)s" on an official video doesn't count: it needs version/cover/dub.)
+const TRANSLATED =
+  /\b(english|eng|spanish|español|espanol|latino|castellano|french|français|francais|german|deutsch|portuguese|português|italian|italiano|russian|indonesian|vietnamese|thai|filipino|tagalog|polish|turkish|arabic|hindi|korean|chinese)\b[\s.:-]*(ver(sion)?\b\.?|cover\b|dub(bed)?\b)|[([【]\s*(english|eng)\s*[)\]】]|\b(sung )?in english\b|英語(版|ver)|日本語訳/i;
 // The music video is what people mean by "the opening": rank it above audio-only uploads.
 const MUSIC_VIDEO = /\bmv\b|\bpv\b|music video|official video|music clip|video clip/i;
 // Live performances, often on the artist's own channel, are never the version you want.
@@ -58,6 +63,7 @@ function scoreHit(hit: VideoHit, theme: AnimeTheme, anime: CatalogGame): number 
   if (BAD.test(hit.title)) score -= 8;
   // Unless the song itself is called "… Live" or similar.
   if (LIVE.test(hit.title) && !LIVE.test(theme.song)) score -= 7;
+  if (TRANSLATED.test(hit.title) && !TRANSLATED.test(theme.song)) score -= 8;
   const d = hit.duration ?? 0;
   if (d >= 60 && d <= 480) score += 1;
   else score -= 5;

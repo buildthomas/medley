@@ -108,6 +108,7 @@ channel, over the studio's TV-size opening and fans' re-uploads:
 | 60–480 s (else −5); full length ≥ 150 s | +1; +0.5 |
 | Covers, reactions, lyrics videos, nightcore, loops, instrument covers (piano, lyre, ocarina…), sheet music, fan animations, game footage (Beat Saber, osu!, Roblox…), 歌ってみた/弾いてみた/カバー/切り抜き… | −8 |
 | Live performances (live, concert, tour, THE FIRST TAKE, acoustic, unplugged, ライブ…) unless the song's own name says so | −7 |
+| Translated versions ("English Version", "Eng Ver.", "English Cover", "(English)", "Español Latino Cover", "sung in English"…), unless the song is listed in that language. "English sub(titles)" doesn't count | −8 |
 
 A song is imported when the best candidate scores ≥ 6; otherwise it's skipped rather than taking
 something wrong. Check a title's choices with `npx tsx scripts/try-import.ts songs anime <title>`.
