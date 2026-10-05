@@ -131,7 +131,7 @@ export function AddView() {
             <h2>Add from a YouTube link</h2>
             <p className="muted">
               Paste one or more playlist or video links. Full-OST videos with a timestamped tracklist in the
-              description are split into separate tracks. Playlists that mix several games are grouped per game.
+              description are split into separate tracks. Playlists that mix several titles are grouped per title.
             </p>
             <textarea
               rows={3}
@@ -217,8 +217,8 @@ export function AddView() {
               <h2>Review import</h2>
               <p className="muted">
                 {draft.source.kind === 'playlist' ? 'Playlist' : 'Video'} “{draft.source.title}”
-                {draft.source.channel && ` by ${draft.source.channel}`}. Check the game name. A name that matches the
-                catalog fills in genre, year and composer automatically.
+                {draft.source.channel && ` by ${draft.source.channel}`}. Check which title it belongs to. A name that
+                matches the catalog fills in its genre, year and credits automatically.
               </p>
             </div>
             <div className="row-actions">

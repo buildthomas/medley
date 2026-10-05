@@ -35,7 +35,8 @@ jump to Discover via a facet intent, `requestDiscover(…, facet)`).
   hidden unless **Show unreleased** is on.
 - `Shelf`: titled horizontal scroller with arrow buttons.
 - `FranchiseCard`: three covers fanned like playing cards.
-- `GameDetail`: modal with the cover's credit under it (`lib/credits.ts`: photographer and
+- `GameDetail` (the title page; opened app-wide via `lib/nav.ts`, rendered by `Overlays.tsx`):
+  modal with the cover's credit under it (`lib/credits.ts`: photographer and
   license for Commons photos from the catalog's `coverCredit`, otherwise the source from the URL), ▶ Play (in order) / ⤮ Shuffle (a session *program*), Remove, a
   per-kind credit line, tags (clickable → browse filter), keywords, links, the anime
   *Openings & endings* list, the track list with role tags, change source.
@@ -62,6 +63,16 @@ not on every render.
 Space play/pause · N/→ skip · P/← back · L like · B never · ↑/↓ volume (Listen tab only) ·
 M mute. Ignored while typing in inputs. Headset/keyboard media keys (play/pause, next, previous)
 work through the Media Session API; see [shuffle.md](shuffle.md).
+
+## Track pages and track rows
+
+- `TrackDetail.tsx`: the track page (labels editable: kind/number, voice, types; facts; source;
+  play/like/never/rename; links to its title and credited artists that are titles).
+- `TrackRow.tsx`: every list of tracks (title pages, up next, program, recently played, search
+  results): ▶ plays, the name opens the track, labels inline (`TrackLabels`), optional link to
+  the title. The Library's editor keeps its table and adds ⓘ → track page and *Open page* per row.
+
+See [ux.md](ux.md) for the navigation model.
 
 ## Discover header
 

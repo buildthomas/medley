@@ -47,6 +47,11 @@ hidden (no `requestAnimationFrame`); test the pop-out in Chrome/Edge.
   - inputs are 16 px on touch screens (iOS zooms otherwise);
   - honour `env(safe-area-inset-*)` for fixed elements;
   - the YouTube player is never smaller than 200×200 CSS px and never hidden while it plays.
+- **Links:** every title mention opens its page (`openTitle`), every track name opens the track
+  page (`openTrack`), every tag opens Discover filtered (`openTag`); ▶ is the only thing that
+  plays. Lists of tracks use `TrackRow`. See [ux.md](ux.md).
+- **Loading vs empty:** `session.loaded` is false until the library has been read; don't show
+  "empty" states before it's true.
 - **Icons in round buttons** are SVG (`src/components/icons.tsx`), not text glyphs.
 - **Escaping:** never edit regexes or template literals through `node -e`, heredocs, sed or
   Python strings in the shell; `\b` turns into a backspace (0x08). Use the editor tools, or

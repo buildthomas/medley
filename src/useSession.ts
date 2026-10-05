@@ -8,9 +8,14 @@ import type { Filters, Game, Track } from './types';
 const QUEUE_SIZE = 4;
 const HISTORY_WINDOW = 400;
 
+const NO_TRACKS: Track[] = [];
+
 export function useSession(filters: Filters) {
+  // undefined until the database has answered, so views can tell "loading" from "empty".
+  const loadedTracks = useLiveQuery(() => db.tracks.toArray(), []);
   const games = useLiveQuery(() => db.games.toArray(), [], [] as Game[]);
-  const tracks = useLiveQuery(() => db.tracks.toArray(), [], [] as Track[]);
+  const tracks = loadedTracks ?? NO_TRACKS;
+  const loaded = loadedTracks !== undefined;
   const recentPlays = useLiveQuery(
     () => db.plays.orderBy('at').reverse().limit(HISTORY_WINDOW).toArray(),
     [],
@@ -179,6 +184,7 @@ export function useSession(filters: Filters) {
 
   return {
     games,
+    loaded,
     tracks,
     gameMap,
     trackMap,

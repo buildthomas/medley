@@ -13,7 +13,7 @@ rename are copied over once on load (`src/migrate.ts`); the old `vgm-shuffle` co
 This file is the 2-minute orientation. **Before your first change, read
 [docs/development.md](docs/development.md)**: how to verify changes without a test suite, the
 conventions (wording, track ids, mobile CSS), and the product decisions already made with the
-owner. Then go deeper through [docs/README.md](docs/README.md), which lists every doc with a
+owner. For anything user-facing, also [docs/ux.md](docs/ux.md): the pages and how they link. Then go deeper through [docs/README.md](docs/README.md), which lists every doc with a
 one-line summary. Read only what your task needs.
 
 ## Run it

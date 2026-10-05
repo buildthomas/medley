@@ -6,6 +6,7 @@ short summary so you can stop early.
 | Doc | Read it when you… |
 |---|---|
 | [development.md](development.md) | start working here: the loop, how to verify changes, conventions, decisions already made |
+| [ux.md](ux.md) | add or change anything user-facing: the primitives (title, track, list, tag), the pages, and how they link |
 | [architecture.md](architecture.md) | need the big picture: processes, data flow, which module owns what |
 | [data-model.md](data-model.md) | touch stored data: IndexedDB tables, catalog entries, URL/localStorage keys |
 | [data-pipeline.md](data-pipeline.md) | work on the catalogs (games, film & TV, anime, artists), collections, covers/tags, or the weekly update |

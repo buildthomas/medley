@@ -764,7 +764,7 @@ button.now-cover-btn:focus-visible {
 
 .lib-row {
   display: grid;
-  grid-template-columns: auto auto 30px minmax(0, 2fr) minmax(0, 1.5fr) 80px 70px;
+  grid-template-columns: auto auto 30px minmax(0, 2fr) minmax(0, 1.5fr) 80px 70px auto;
   gap: 10px;
   align-items: center;
   padding: 9px 4px;
@@ -899,7 +899,7 @@ tr.excluded {
     display: none;
   }
   .lib-row {
-    grid-template-columns: auto auto 30px minmax(0, 1fr) auto;
+    grid-template-columns: auto auto 30px minmax(0, 1fr) auto auto;
   }
   .listen-layout.compact {
     left: 10px;

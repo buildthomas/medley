@@ -6,7 +6,7 @@ import { runBulk } from '../lib/bulk';
 import { franchiseOf, isUpcoming, useCatalog } from '../lib/catalog';
 import { autoAddGame } from '../lib/importer';
 import { takeDiscoverIntent, useDiscoverIntent } from '../lib/intents';
-import { KINDS, kindOf } from '../lib/kinds';
+import { kindOf } from '../lib/kinds';
 import { normalize } from '../lib/parse';
 import { decadeOf } from '../lib/picker';
 import { buildIndex, gameIndex, search } from '../lib/search';
@@ -15,11 +15,12 @@ import type { CatalogGame, Track } from '../types';
 import type { Session } from '../useSession';
 import { Collections } from './discover/Collections';
 import { FranchiseCard, type Franchise } from './discover/FranchiseCard';
-import { GameDetail, type FacetKind } from './discover/GameDetail';
+import { type FacetKind } from './discover/GameDetail';
+import { TrackRow } from './TrackRow';
+import { openTitle } from '../lib/nav';
 import { AnimeScopePicker } from './AnimeScopePicker';
 import { GameTile, type TileState } from './discover/GameTile';
 import { Shelf } from './discover/Shelf';
-import { formatTime } from './ui';
 
 type Mode = 'home' | 'browse' | 'franchises';
 type Sort = 'popular' | 'newest' | 'oldest' | 'az';
@@ -102,7 +103,6 @@ export function DiscoverView({ session }: { session: Session }) {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [focus, setFocus] = useState<{ title: string; ids: string[] } | null>(null);
   const [limit, setLimit] = useState(PAGE);
-  const [detail, setDetail] = useState<CatalogGame | null>(null);
   const [status, setStatus] = useState<Record<string, 'busy' | 'failed'>>({});
   const [foundArtists, setFoundArtists] = useState<CatalogGame[]>([]);
 
@@ -162,7 +162,6 @@ export function DiscoverView({ session }: { session: Session }) {
     runBulk(label, list.filter((g) => !libraryIds.has(g.id) && !isUpcoming(g)));
 
   function goBrowse(next: { facets?: Facets; focus?: { title: string; ids: string[] } | null }) {
-    setDetail(null);
     setFocus(next.focus ?? null);
     setFacets(next.facets ?? {});
     setQuery('');
@@ -418,7 +417,7 @@ export function DiscoverView({ session }: { session: Session }) {
 
   const tiles = (list: CatalogGame[]) =>
     list.map((g) => (
-      <GameTile key={g.id} game={g} state={tileState(g)} showKind={domain === 'all'} onOpen={setDetail} onAdd={add} onPlay={play} />
+      <GameTile key={g.id} game={g} state={tileState(g)} showKind={domain === 'all'} onOpen={(g) => openTitle(g.id)} onAdd={add} onPlay={play} />
     ));
 
   const gameShelf = (s: ShelfDef) => (
@@ -655,7 +654,6 @@ export function DiscoverView({ session }: { session: Session }) {
         </>
       )}
 
-      {detail && <GameDetail game={detail} session={session} onClose={() => setDetail(null)} onFacet={openFacet} />}
     </div>
   );
 }
@@ -667,29 +665,16 @@ function TrackResults({ tracks, session }: { tracks: Track[]; session: Session }
       <header className="shelf-head">
         <div>
           <h2>Tracks in your library</h2>
-          <p className="muted small">Click to play now.</p>
+          <p className="muted small">▶ plays it now; the name opens the track.</p>
         </div>
         <button className="link" onClick={() => session.playProgram('Search results', tracks.map((t) => t.id))}>
           ▶ Play all {tracks.length}
         </button>
       </header>
-      <ol className="track-results">
-        {tracks.map((t) => {
-          const work = session.gameMap.get(t.gameId);
-          return (
-            <li key={t.id} onClick={() => session.playNow(t.id)} title="Play now">
-              <span className="play-dot">▶</span>
-              <span className="truncate">
-                <b>{t.title}</b>
-                {t.artist && <span className="muted"> · {t.artist}</span>}
-              </span>
-              <span className="muted truncate">
-                {work ? `${KINDS.find((k) => k.id === kindOf(work))?.icon ?? ''} ${work.title}` : ''}
-              </span>
-              <span className="muted tabular">{formatTime(t.duration)}</span>
-            </li>
-          );
-        })}
+      <ol className="track-list">
+        {tracks.map((t) => (
+          <TrackRow key={t.id} track={t} work={session.gameMap.get(t.gameId)} showWork onPlay={() => session.playNow(t.id)} />
+        ))}
       </ol>
     </section>
   );

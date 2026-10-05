@@ -26,6 +26,10 @@ from `server/auth.ts`, rate limit, a disk cache for YouTube answers). The catalo
 coordinate through files in the data dir. Data and config directories are outside the repo
 (`scripts/paths.mjs`). See [hosting.md](hosting.md).
 
+Navigation (`src/lib/nav.ts`): tabs are the base; title and track pages are overlays that
+stack, live in the URL (`?open=…`) and close with Back. `Overlays.tsx` renders the top one. See
+[ux.md](ux.md).
+
 Start-up in the browser (`src/main.tsx`): copy a library from old storage names / the old :5173
 address (`migrate.ts`, `lib/originTransfer.ts`) → ask the server whether sign-in is needed
 (`lib/auth.ts`; if so, only `Home` with its sign-in form is shown, no tabs) → load `App`.

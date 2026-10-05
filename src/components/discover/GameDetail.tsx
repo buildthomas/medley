@@ -9,8 +9,8 @@ import { importAnime, useAnimeScope, type AnimeScope } from '../../lib/importers
 import type { AnimeTheme, CatalogGame, GameTags } from '../../types';
 import { AnimeScopePicker } from '../AnimeScopePicker';
 import type { Session } from '../../useSession';
-import { formatTime } from '../ui';
 import { Cover } from './Cover';
+import { TrackRow } from '../TrackRow';
 
 export type FacetKind = keyof GameTags | 'keyword' | 'franchise' | 'composer';
 
@@ -368,20 +368,9 @@ export function GameDetail({
                 ))}
               </p>
             )}
-            <ol className="detail-tracklist">
+            <ol className="track-list">
               {sorted.map((t) => (
-                <li key={t.id} className={t.banned || t.unavailable ? 'excluded' : ''}>
-                  <button className="icon" disabled={t.unavailable} onClick={() => session.playNow(t.id)} title="Play">
-                    ▶
-                  </button>
-                  <span className="truncate">
-                    {t.role && t.role !== 'score' && t.role !== 'song' && <span className="theme-tag">{t.role.toUpperCase()}{t.seq ?? ''}</span>}
-                    {t.title}
-                    {t.artist && !isArtist && <span className="muted"> · {t.artist}</span>}
-                  </span>
-                  <span className="muted tabular">{formatTime(t.duration)}</span>
-                  {t.liked && <span className="liked">♥</span>}
-                </li>
+                <TrackRow key={t.id} track={t} showArtist={!isArtist} onPlay={() => session.playNow(t.id)} />
               ))}
             </ol>
           </div>

@@ -6,6 +6,8 @@ import { LibraryView } from './components/LibraryView';
 import { BulkStatus } from './components/BulkStatus';
 import { Home } from './components/Home';
 import { Logo } from './components/Logo';
+import { Overlays } from './components/Overlays';
+import { setTabHandler } from './lib/nav';
 import { NewArrivals } from './components/NewArrivals';
 import { ListenView } from './components/ListenView';
 import { db } from './db';
@@ -33,6 +35,8 @@ export function App() {
     setTabState(t);
     writeUrlState({ tab: t });
   };
+  // Any view can switch tabs through lib/nav (e.g. following a composer to Discover).
+  useEffect(() => setTabHandler(setTab), []);
   const [filters, setFiltersState] = useState<Filters>(loadFilters);
   const session = useSession(filters);
 
@@ -93,6 +97,8 @@ export function App() {
           )}
         </div>
       </main>
+      {/* Title and track pages, over any tab (lib/nav.ts). */}
+      <Overlays session={session} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { db, deleteGame } from '../db';
 import { primaryLink, useCatalog } from '../lib/catalog';
 import { kindLabel, kindOf, titlesLabel } from '../lib/kinds';
+import { openTitle, openTrack } from '../lib/nav';
 import { foreignTitleRatio, preferEnglishSource } from '../lib/importer';
 import { TRACK_TYPES } from '../lib/parse';
 import { buildIndex, search } from '../lib/search';
@@ -69,7 +70,8 @@ export function LibraryView({ session }: { session: Session }) {
     setFixing(`Switched ${fixed} of ${titlesLabel(foreign)} to English track names; the rest only exist in their original language.`);
   }
 
-  if (!games.length) return <Empty>Nothing here yet. Add titles from Discover, or paste a link under Add link.</Empty>;
+  if (!games.length)
+    return session.loaded ? <Empty>Nothing here yet. Add titles from Discover, or paste a link under Add link.</Empty> : null;
 
   return (
     <div className="library">
@@ -107,13 +109,32 @@ export function LibraryView({ session }: { session: Session }) {
                   onChange={(e) => db.games.update(g.id, { enabled: e.target.checked })}
                 />
                 <span className="caret">{open ? '▾' : '▸'}</span>
-                <Cover game={{ title: g.title, year: g.year, covers: cat?.byId.get(g.id)?.covers }} className="lib-cover" />
+                <button
+                  className="link-plain"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openTitle(g.id);
+                  }}
+                  title="Open page"
+                >
+                  <Cover game={{ title: g.title, year: g.year, covers: cat?.byId.get(g.id)?.covers }} className="lib-cover" />
+                </button>
                 <span className="lib-title truncate">
                   {g.title} {g.year && <span className="muted">{g.year}</span>}
                 </span>
                 <span className="muted small truncate hide-sm">{g.genres.join(', ')}</span>
                 <span className="muted small tabular">{list.length} tracks</span>
                 <span className="muted small tabular hide-sm">{plays(g)} plays</span>
+                <button
+                  className="small-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openTitle(g.id);
+                  }}
+                  title={`Open this ${kindLabel(kindOf(g)).one}'s page`}
+                >
+                  Open page
+                </button>
               </div>
               {open && <GameEditor game={g} tracks={list} session={session} link={primaryLink(cat?.byId.get(g.id))} />}
             </li>
@@ -192,6 +213,9 @@ function GameEditor({
               <td>
                 <button className="icon" title="Play now" disabled={t.unavailable} onClick={() => session.playNow(t.id)}>
                   ▶
+                </button>
+                <button className="icon" title="Track details" onClick={() => openTrack(t.id)}>
+                  ⓘ
                 </button>
               </td>
               <td className="grow">

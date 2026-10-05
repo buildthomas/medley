@@ -6,8 +6,8 @@ import { useMediaSession } from '../lib/mediaSession';
 import { pipSupported, usePopOut } from './PopOutPlayer';
 import { TRACK_TYPES } from '../lib/parse';
 import { Cover } from './discover/Cover';
-import { GameDetail } from './discover/GameDetail';
-import { requestDiscover } from '../lib/intents';
+import { TrackRow } from './TrackRow';
+import { openTitle, openTrack } from '../lib/nav';
 import type { Session } from '../useSession';
 import { loadVolume, saveVolume, writeUrlState } from '../lib/urlState';
 import { YouTubePlayer, type PlayerHandle } from './YouTubePlayer';
@@ -36,9 +36,6 @@ export function ListenView({
   const [notice, setNotice] = useState<string | null>(null);
   const cat = useCatalog();
   const catGame = currentGame ? cat?.byId.get(currentGame.id) : undefined;
-  // Clicking the title (or cover) of what's playing opens its page right here.
-  const [showWork, setShowWork] = useState(false);
-  const work = catGame ?? (currentGame ? { ...currentGame, franchise: currentGame.franchise ?? undefined, pop: 0 } : undefined);
 
   // Phones: YouTube's embedded player pauses itself when the screen locks or you switch apps
   // (background play is a YouTube Premium feature, so we don't fight it). When you come back,
@@ -169,7 +166,7 @@ export function ListenView({
     session.next();
   }
 
-  if (!session.tracks.length) {
+  if (session.loaded && !session.tracks.length) {
     if (compact) return null;
     return (
       <Empty>
@@ -231,7 +228,7 @@ export function ListenView({
         <div className="now">
           <div className="now-row">
             {currentGame && (
-              <button className="now-cover-btn" onClick={() => setShowWork(true)} title={`Open ${currentGame.title}`}>
+              <button className="now-cover-btn" onClick={() => openTitle(currentGame.id)} title={`Open ${currentGame.title}`}>
                 <Cover
                   game={{ title: currentGame.title, year: currentGame.year, covers: catGame?.covers }}
                   className="now-cover"
@@ -241,7 +238,7 @@ export function ListenView({
             <div className="now-text">
             <div className="now-game">
               {currentGame ? (
-                <button className="now-work" onClick={() => setShowWork(true)} title={`Open ${currentGame.title}`}>
+                <button className="now-work" onClick={() => openTitle(currentGame.id)} title={`Open ${currentGame.title}`}>
                   {currentGame.title}
                 </button>
               ) : (
@@ -249,7 +246,15 @@ export function ListenView({
               )}
               {currentGame?.year && <span className="muted"> · {currentGame.year}</span>}
             </div>
-            <div className="now-title">{current?.title ?? 'Press start, or hit N'}</div>
+            <div className="now-title">
+              {current ? (
+                <button className="now-work" onClick={() => openTrack(current.id)} title="Track details">
+                  {current.title}
+                </button>
+              ) : (
+                'Press start, or hit N'
+              )}
+            </div>
             <div className="now-meta">
               {current?.types.map((t) => (
                 <span key={t} className="tag">
@@ -386,12 +391,9 @@ export function ListenView({
                 back to shuffle
               </button>
             </header>
-            <ol className="tracklist">
+            <ol className="track-list compact-list">
               {session.program.tracks.slice(0, 8).map((t) => (
-                <li key={t.id} onClick={() => session.playNow(t.id)} title="Play now">
-                  <span className="truncate">{t.title}</span>
-                  <span className="muted truncate">{gameMap.get(t.gameId)?.title}</span>
-                </li>
+                <TrackRow key={t.id} track={t} work={gameMap.get(t.gameId)} showWork showArtist={false} onPlay={() => session.playNow(t.id)} />
               ))}
             </ol>
           </div>
@@ -403,14 +405,11 @@ export function ListenView({
               reshuffle
             </button>
           </header>
-          <ol className="tracklist">
+          <ol className="track-list compact-list">
             {queue.map((t) => (
-              <li key={t.id} onClick={() => session.playNow(t.id)} title="Play now">
-                <span className="truncate">{t.title}</span>
-                <span className="muted truncate">{gameMap.get(t.gameId)?.title}</span>
-              </li>
+              <TrackRow key={t.id} track={t} work={gameMap.get(t.gameId)} showWork showArtist={false} onPlay={() => session.playNow(t.id)} />
             ))}
-            {!queue.length && <li className="muted">Nothing matches the current filters.</li>}
+            {!queue.length && session.loaded && <li className="muted">Nothing matches the current filters.</li>}
           </ol>
         </div>
         {recent.length > 0 && (
@@ -418,15 +417,17 @@ export function ListenView({
             <header>
               <h3>Recently played</h3>
             </header>
-            <ol className="tracklist">
+            <ol className="track-list compact-list">
               {recent.map(({ p, t }) => (
-                <li key={p.id} onClick={() => session.playNow(t!.id)} title="Play again">
-                  <span className="truncate">
-                    {p.skipped && <span className="muted">skipped · </span>}
-                    {t!.title}
-                  </span>
-                  <span className="muted truncate">{gameMap.get(t!.gameId)?.title}</span>
-                </li>
+                <TrackRow
+                  key={p.id}
+                  track={t!}
+                  work={gameMap.get(t!.gameId)}
+                  showWork
+                  showArtist={false}
+                  onPlay={() => session.playNow(t!.id)}
+                  playTitle={p.skipped ? 'Play again (you skipped it)' : 'Play again'}
+                />
               ))}
             </ol>
           </div>
@@ -435,19 +436,6 @@ export function ListenView({
           <kbd>Space</kbd> play/pause · <kbd>N</kbd> skip · <kbd>P</kbd> back · <kbd>L</kbd> like · <kbd>B</kbd> never · <kbd>↑</kbd><kbd>↓</kbd> volume · <kbd>M</kbd> mute
         </p>
       </div>
-      {showWork && work && (
-        <GameDetail
-          game={work}
-          session={session}
-          onClose={() => setShowWork(false)}
-          onFacet={(kind, value) => {
-            // Tags (composer, genre, studio…) browse everything with that tag in Discover.
-            setShowWork(false);
-            requestDiscover(value, [], { kind, value });
-            goTo('discover');
-          }}
-        />
-      )}
     </div>
   );
 }
