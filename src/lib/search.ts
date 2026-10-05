@@ -1,4 +1,4 @@
-// Fast fuzzy-ish search over game titles.
+// Fast fuzzy-ish search over titles (and anything else indexed with buildIndex).
 //
 // Every query word must match some word of the game (any order), by:
 //   exact word > word prefix ("won" → "wonder") > initials ("botw", "ff7") > one typo (≥4 letters).
@@ -44,7 +44,7 @@ export function buildIndex<T>(
 export function gameIndex(games: CatalogGame[]) {
   return buildIndex(games, (g) => ({
     title: g.title,
-    other: [g.series, g.franchise, ...g.composers, ...(g.tags?.developer ?? [])],
+    other: [...(g.altTitles ?? []), g.series, g.franchise, ...g.composers, ...(g.tags?.developer ?? [])],
     pop: g.pop,
   }));
 }
@@ -97,12 +97,22 @@ function tokenScore(tok: string, e: Entry<unknown>, fuzzy: boolean): number {
   return 0;
 }
 
+// An abbreviation glued to a Roman numeral ("ffvii", "dqxi", "khii") also reads as the initials
+// plus the number ("ff7"), which is how titles are indexed (normalize turns VII into 7). Only 2–3
+// letter prefixes, so ordinary words ("phoenix", "remix") aren't split.
+const NUMERALS: Record<string, string> = { ii: '2', iii: '3', iv: '4', vi: '6', vii: '7', viii: '8', ix: '9', xi: '11', xii: '12', xiii: '13', xiv: '14', xv: '15', xvi: '16' };
+function alternative(tok: string): string | null {
+  const m = /^([a-z]{2,3}?)(xvi|xiv|xiii|xii|xv|xi|viii|vii|vi|iv|ix|iii|ii)$/.exec(tok);
+  return m ? m[1] + NUMERALS[m[2]] : null;
+}
+
 function run<T>(index: SearchIndex<T>, toks: string[], fuzzy: boolean) {
   const out: { item: T; score: number }[] = [];
   for (const e of index.entries) {
     let score = 0;
     for (const t of toks) {
-      const s = tokenScore(t, e, fuzzy);
+      const alt = alternative(t);
+      const s = Math.max(tokenScore(t, e, fuzzy), alt ? tokenScore(alt, e, fuzzy) : 0);
       if (!s) {
         score = 0;
         break;

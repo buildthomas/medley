@@ -55,14 +55,7 @@ export function TrackDetail({ id, session }: { id: string; session: Session }) {
   const update = (changes: Partial<Track>) => db.tracks.update(track.id, changes);
   const toggleType = (type: string) =>
     update({ types: track.types.includes(type) ? track.types.filter((t) => t !== type) : [...track.types, type] });
-  // Credited artists that are titles in Medley (an artist page) become links.
-  const artistLinks = (track.artist ?? '')
-    .split(/,\s*|\s+&\s+/)
-    .filter(Boolean)
-    .map((name) => ({
-      name,
-      id: cat?.games.find((g) => g.kind === 'artist' && normalize(g.title) === normalize(name))?.id,
-    }));
+
   const length = LENGTHS.find((l) => l.id === lengthOf(track));
   const sliceFrom = track.start != null ? ` · from ${formatTime(track.start)} in the video` : '';
   const youtube = `https://www.youtube.com/watch?v=${track.videoId}${track.start ? `&t=${Math.floor(track.start)}` : ''}`;
@@ -108,22 +101,7 @@ export function TrackDetail({ id, session }: { id: string; session: Session }) {
               </button>
             </h1>
           )}
-          {artistLinks.length > 0 && (
-            <p className="muted">
-              {artistLinks.map((a, i) => (
-                <span key={a.name}>
-                  {i > 0 && ', '}
-                  {a.id ? (
-                    <button className="link inline-link" onClick={() => openTitle(a.id!)}>
-                      {a.name}
-                    </button>
-                  ) : (
-                    a.name
-                  )}
-                </span>
-              ))}
-            </p>
-          )}
+          {track.artist && <p className="muted">{track.artist}</p>}
           <div className="detail-actions">
             <button className="primary" disabled={track.unavailable} onClick={() => session.playNow(track.id)}>
               <PlayIcon size={13} /> {isCurrent ? 'Play again' : 'Play now'}

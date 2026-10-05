@@ -30,7 +30,7 @@ hidden (no `requestAnimationFrame`); test the pop-out in Chrome/Edge.
 
 ## Conventions
 
-- **Words:** Medley spans games, anime, film & TV and artists. User-facing text says "title(s)",
+- **Words:** Medley spans games, anime and film & TV. User-facing text says "title(s)",
   or the kind's own word via `kindLabel(kind).one` / `titlesLabel(works)` (`src/lib/kinds.ts`:
   "12 films", "3 anime", "30 titles"). Never "game" outside game-only places (game collections,
   Steam import). In code, `Game`/`CatalogGame`/`gameId` mean any work; that's historical, keep it.
@@ -73,6 +73,9 @@ hidden (no `requestAnimationFrame`); test the pop-out in Chrome/Edge.
 | Hosting, if ever: private / invite-only, cover images hot-linked (never re-hosted) | Copyright and YouTube terms; see hosting.md |
 | Discover is the default tab; the logo opens Home (pitch + sign-in on hosted) | Owner's request |
 | Mood/energy tags: not now | Owner deferred it |
+| No artists domain | Built, then removed (Oct 2026): the owner didn't use it. It's in git history |
+| A game can have platform versions with separate soundtracks | 2000s multi-platform games often differed per platform (Harry Potter) |
+| Tracks play in album order when played in order | Owner expectation; `pos` from the playlist |
 
 ## Where to add things
 
@@ -83,7 +86,7 @@ hidden (no `requestAnimationFrame`); test the pop-out in Chrome/Edge.
 - **A Listen filter:** the field on `Filters` (`src/types.ts`), the check in `gamePasses` /
   `trackPasses` (`src/lib/picker.ts`), a section in `FiltersPanel.tsx`.
 - **An API route:** `server/api.ts` (it is behind sign-in automatically when hosted); a client
-  wrapper in `src/lib/api.ts`; cache it with `cached()` if it calls YouTube/MusicBrainz.
+  wrapper in `src/lib/api.ts`; cache it with `cached()` if it calls YouTube or another outside service.
 - **A library schema change:** a new `db.version(n)` in `defineSchema` (`src/db.ts`); never edit
   old versions. Optional, unindexed fields need no version bump.
 - **Start-up repairs/migrations:** `syncLibraryMeta()` (`src/lib/updater.ts`) runs on every

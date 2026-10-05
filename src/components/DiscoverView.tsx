@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { apiUrl } from '../lib/api';
 import { runBulk } from '../lib/bulk';
 import { franchiseOf, isUpcoming, useCatalog } from '../lib/catalog';
 import { autoAddGame } from '../lib/importer';
 import { takeDiscoverIntent, useDiscoverIntent } from '../lib/intents';
 import { kindOf } from '../lib/kinds';
-import { normalize } from '../lib/parse';
 import { decadeOf } from '../lib/picker';
 import { buildIndex, gameIndex, search } from '../lib/search';
 import { starterGames } from '../lib/starter';
@@ -26,14 +24,13 @@ type Mode = 'home' | 'browse' | 'franchises';
 type Sort = 'popular' | 'newest' | 'oldest' | 'az';
 type Facets = Partial<Record<FacetKind, string[]>>;
 /** Discover's top-level sections. "screen" = films + series. */
-type Domain = 'all' | 'game' | 'anime' | 'screen' | 'artist';
+type Domain = 'all' | 'game' | 'anime' | 'screen';
 
 const DOMAINS: { id: Domain; label: string }[] = [
   { id: 'all', label: 'Everything' },
   { id: 'game', label: '🎮 Games' },
   { id: 'anime', label: '🌸 Anime' },
   { id: 'screen', label: '🎬 Film & TV' },
-  { id: 'artist', label: '🎤 Artists' },
 ];
 
 const inDomain = (g: CatalogGame, d: Domain) => {
@@ -104,11 +101,9 @@ export function DiscoverView({ session }: { session: Session }) {
   const [focus, setFocus] = useState<{ title: string; ids: string[] } | null>(null);
   const [limit, setLimit] = useState(PAGE);
   const [status, setStatus] = useState<Record<string, 'busy' | 'failed'>>({});
-  const [foundArtists, setFoundArtists] = useState<CatalogGame[]>([]);
 
   function setDomain(d: Domain) {
     setDomainState(d);
-    if (d === 'artist') setMode((m) => (m === 'franchises' ? 'home' : m)); // artists have no series
     setFacets({});
     setFocus(null);
     try {
@@ -177,7 +172,7 @@ export function DiscoverView({ session }: { session: Session }) {
     const map = new Map<string, CatalogGame[]>();
     for (const g of games) {
       const f = franchiseOf(g);
-      if (!f || kindOf(g) === 'artist') continue;
+      if (!f) continue;
       let list = map.get(f);
       if (!list) map.set(f, (list = []));
       list.push(g);
@@ -251,26 +246,6 @@ export function DiscoverView({ session }: { session: Session }) {
     }
     return out;
   }, [results, facets]);
-
-  // ---- artists beyond the catalog (MusicBrainz), when searching artists ----------------
-  useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2 || (domain !== 'artist' && domain !== 'all')) {
-      setFoundArtists([]);
-      return;
-    }
-    const known = new Set(allGames.filter((g) => kindOf(g) === 'artist').map((g) => normalize(g.title)));
-    const timer = window.setTimeout(async () => {
-      try {
-        const res = await fetch(apiUrl(`/api/artists/search?q=${encodeURIComponent(q)}`));
-        const found: CatalogGame[] = res.ok ? await res.json() : [];
-        setFoundArtists(found.filter((a) => !known.has(normalize(a.title))).slice(0, 12));
-      } catch {
-        setFoundArtists([]);
-      }
-    }, 450);
-    return () => window.clearTimeout(timer);
-  }, [query, domain, allGames]);
 
   // ---- tracks in your library matching the search ---------------------------------------
   const trackIndex = useMemo(
@@ -362,32 +337,11 @@ export function DiscoverView({ session }: { session: Session }) {
       push('films-now', 'Films of the 2020s', list('films-2020s'));
       push('films-classics', 'Film classics', list('films-classics'), 'Before 1990');
     }
-    if (domain === 'artist') {
-      const topArtist = top[0];
-      const g = topArtist?.genres.find((x) => x !== 'Other');
-      if (topArtist && g)
-        push('because-artist', `Because you listen to ${topArtist.title}`, games.filter((a) => a.genres.includes(g) && a.id !== topArtist.id && visible(a)).sort((a, b) => b.pop - a.pop), g);
-      push('artists-top', 'Most popular artists', list('artists-top'));
-      for (const [id, title] of [
-        ['artists-pop', 'Pop'],
-        ['artists-hip-hop', 'Hip hop'],
-        ['artists-k-pop', 'K-pop'],
-        ['artists-rock', 'Rock'],
-        ['artists-r-b-soul', 'R&B & soul'],
-        ['artists-electronic', 'Electronic'],
-        ['artists-latin', 'Latin'],
-        ['artists-indie-alternative', 'Indie & alternative'],
-        ['artists-j-pop', 'J-pop'],
-        ['artists-country', 'Country'],
-      ])
-        push(id, title, list(id));
-    }
     if (domain === 'all') {
       becauseYouListen();
       push('year-now', `Biggest games of ${thisYear}`, list(`year-${thisYear}`));
       push('anime-top', 'Most popular anime', list('anime-top'), 'Openings, endings and soundtracks');
       push('disney', 'Disney animation', list('studio-disney-animation'));
-      push('artists-top', 'Most popular artists', list('artists-top'));
       push('musicals', 'Musicals', list('films-musicals'));
       push('anime-now', `Anime of ${thisYear}`, list(`anime-${thisYear}`));
       push('indie-last', `Indie hits of ${thisYear - 1}`, list(`indie-${thisYear - 1}`));
@@ -456,9 +410,7 @@ export function DiscoverView({ session }: { session: Session }) {
         <input
           className="search big"
           placeholder={
-            domain === 'artist'
-              ? 'Search any artist…'
-              : domain === 'anime'
+            domain === 'anime'
                 ? 'Search anime, studios, songs…'
                 : 'Search titles, series, composers, songs in your library…'
           }
@@ -475,7 +427,7 @@ export function DiscoverView({ session }: { session: Session }) {
             [
               ['home', 'For you'],
               ['browse', 'Browse all'],
-              ...(domain === 'artist' ? [] : [['franchises', 'Series & franchises']]),
+              ['franchises', 'Series & franchises'],
             ] as [Mode, string][]
           ).map(([m, label]) => (
             <button key={m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>
@@ -636,19 +588,7 @@ export function DiscoverView({ session }: { session: Session }) {
               Show more ({(results.length - limit).toLocaleString()} left)
             </button>
           )}
-          {!results.length && !foundArtists.length && !trackHits.length && <div className="empty">Nothing matches.</div>}
-
-          {foundArtists.length > 0 && (
-            <section className="shelf">
-              <header className="shelf-head">
-                <div>
-                  <h2>More artists</h2>
-                  <p className="muted small">Not in the catalog yet, found on MusicBrainz. Add one to import their popular songs.</p>
-                </div>
-              </header>
-              <div className="tile-grid">{tiles(foundArtists)}</div>
-            </section>
-          )}
+          {!results.length && !trackHits.length && <div className="empty">Nothing matches.</div>}
 
           {trackHits.length > 0 && <TrackResults tracks={trackHits} session={session} />}
         </>

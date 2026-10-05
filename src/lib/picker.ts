@@ -1,5 +1,5 @@
 // The shuffle. Two stages so big soundtracks don't drown out small ones:
-//   1. pick a WORK (game, film, anime, artist…). The Variety knob decides how sticky the
+//   1. pick a WORK (game, film, series, anime). The Variety knob decides how sticky the
 //      current work is (play a few of its tracks in a row) vs how long a work rests after
 //      playing (cooldown); series/composer repeats and likes nudge the weights;
 //   2. pick a TRACK inside that work, favouring unheard or liked tracks depending on the

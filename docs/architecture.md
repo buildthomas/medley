@@ -13,7 +13,6 @@ Browser (React app)                           Node (Vite dev server, `npm run de
 UI + shuffle + IndexedDB library  ── /api ──▶  server/plugin.ts
 YouTube IFrame player (audio)                   ├─ youtube.ts  search / playlist / video (keyless scraping)
 Wikidata SPARQL (Steam id lookups) ◀── direct   ├─ steam.ts    optional Steam Web API
-                                                ├─ artists.ts  /api/artists/search (MusicBrainz)
                                                 ├─ /api/refresh → scripts/build-all.mjs (all 4 builders)
                                                 ├─ /api/data?name= → <data dir>/*.json (refreshed catalogs)
                                                 └─ /api/my-games → <config dir>/my-games.json
@@ -45,9 +44,10 @@ in-memory IndexedDB (`fake-indexeddb`) and the running dev server, then writes a
 | `src/lib/picker.ts` | Choosing the next track (pure functions; see [shuffle.md](shuffle.md)) |
 | `src/lib/importer.ts` | Turning YouTube links into works+tracks; auto-finding a soundtrack (games, film & TV incl. songs albums); dispatch per `kind` |
 | `src/lib/importers/anime.ts` | Finding each OP/ED/insert song of an anime, then its OST |
-| `src/lib/importers/artist.ts` | An artist's popular songs; parsing and adding a single song |
 | `src/lib/sync.ts` | Weekly re-check of imported playlists (added / removed / renamed videos) |
 | `src/lib/kinds.ts` | Domain kinds, icons, labels, roles, credit lines |
+| `src/lib/platforms.ts` | Game platforms as written in playlist titles (versions of a game) |
+| `src/lib/trackOrder.ts` | Album order of a title's tracks; backfilling playlist positions |
 | `src/lib/parse.ts` | Title cleaning, track-type tagging, timestamp/chapter parsing, catalog title matching |
 | `src/lib/catalog.ts` | Loading all catalogs + collections (bundled vs refreshed vs personal), `useCatalog()`, `isUpcoming` |
 | `src/lib/bulk.ts` | Background bulk-import queue (survives tab switches and reloads), failures, arrivals |
@@ -58,7 +58,7 @@ in-memory IndexedDB (`fake-indexeddb`) and the running dev server, then writes a
 | `src/db.ts` | Dexie schema, backup export/import, `meta` key-value helpers |
 | `server/youtube.ts` | All knowledge of YouTube's page structure |
 | `scripts/catalog-builder.mjs` | Which games exist and which collections they're in |
-| `scripts/screen-builder.mjs`, `anime-builder.mjs`, `artist-builder.mjs` | The same for film & TV, anime, artists |
+| `scripts/screen-builder.mjs`, `anime-builder.mjs` | The same for film & TV and anime |
 | `scripts/build-all.mjs` | Runs every builder; used by `npm run catalog` and `/api/refresh` |
 | `scripts/enrich.mjs` | Covers, tags, keywords, store links for catalog entries |
 

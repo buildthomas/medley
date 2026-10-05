@@ -50,7 +50,7 @@ variables win; `.env.local` in the repo also works for local testing):
 | `MEDLEY_PASSWORD` | unset | A shared invite code (signs in as "guest"), in addition to `invites.json` |
 | `MEDLEY_SECRET` | random, kept in the data dir | Signs session cookies. Set it if the data dir isn't persistent |
 | `MEDLEY_TRUST_PROXY` | off | `1` behind a reverse proxy: use `X-Forwarded-For` (rate limits) and `X-Forwarded-Proto` (secure cookies) |
-| `MEDLEY_RATE_LIMIT` | `600` | YouTube/MusicBrainz API calls per minute per IP (`0` = off) |
+| `MEDLEY_RATE_LIMIT` | `600` | YouTube API calls per minute per IP (`0` = off) |
 | `MEDLEY_ASSET_URL` | unset | **Build time**: CDN base URL for the hashed assets |
 | `STEAM_API_KEY` | unset | Optional: load a Steam library by profile URL |
 

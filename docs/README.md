@@ -9,7 +9,7 @@ short summary so you can stop early.
 | [ux.md](ux.md) | add or change anything user-facing: the primitives (title, track, list, tag), the pages, and how they link |
 | [architecture.md](architecture.md) | need the big picture: processes, data flow, which module owns what |
 | [data-model.md](data-model.md) | touch stored data: IndexedDB tables, catalog entries, URL/localStorage keys |
-| [data-pipeline.md](data-pipeline.md) | work on the catalogs (games, film & TV, anime, artists), collections, covers/tags, or the weekly update |
+| [data-pipeline.md](data-pipeline.md) | work on the catalogs (games, film & TV, anime), collections, covers/tags, or the weekly update |
 | [youtube-import.md](youtube-import.md) | work on finding/importing music: scraping, ranking, title cleaning, per-domain importers, bulk import, source sync |
 | [shuffle.md](shuffle.md) | change what plays next: the picker and Variety, filters and facets, programs, queue, resume, pop-out |
 | [ui.md](ui.md) | change screens or styling: views, Discover components, CSS conventions |
@@ -21,4 +21,4 @@ short summary so you can stop early.
 Conventions in these docs: paths are relative to the repo root; "the server" means the `/api`
 routes (`server/api.ts`, run by the dev server or `server/serve.ts`); "the catalog" means `CatalogGame[]`
 (public metadata for every domain), "the library" means the user's IndexedDB (works they
-imported). "Game" in code means any work (game, film, series, anime, artist); see `kind`.
+imported). "Game" in code means any work (game, film, series, anime); see `kind`.

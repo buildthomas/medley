@@ -10,7 +10,7 @@
 // Sources: Wikidata (SPARQL) and SteamSpy's public "Indie" tag list. No API keys.
 
 import { enrichGames } from './enrich.mjs';
-import { sparql as wdSparql } from './wd.mjs';
+import { inBatches, sparql as wdSparql, values } from './wd.mjs';
 
 const MIN_LINKS = 12; // base catalog: games with >= this many Wikipedia language editions
 const PER_YEAR = 40; // "biggest games" per year
@@ -198,15 +198,20 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
     indie.set(y, ids);
   }
 
+  // 4b. Steam favourites: every indie game with >= 1500 positive reviews, not only each year's
+  // top 15. Well-loved indie games often have few Wikipedia editions (Shantae sequels: 10).
+  for (const r of indieRows) pop.set(r.id, Math.max(pop.get(r.id) ?? 0, r.links));
+  log(`  ${new Set(indieRows.map((r) => r.id)).size} indie games kept`);
+
   // 5. Details for everything ------------------------------------------------------
-  const ids = [...pop.keys()];
-  log(`Fetching details for ${ids.length} games…`);
   const games = new Map();
+  const seriesIds = new Set(); // every series (P179) a catalog game belongs to
+  const details = async (ids) => {
   const BATCH = 200;
   for (let i = 0; i < ids.length; i += BATCH) {
     const batch = ids.slice(i, i + BATCH);
     const rows = await sparql(`
-      SELECT ?game ?label ?date ?prec ?genreLabel ?seriesLabel ?composerLabel ?steam WHERE {
+      SELECT ?game ?label ?date ?prec ?genreLabel ?s ?seriesLabel ?composerLabel ?steam WHERE {
         VALUES ?game { ${batch.map((id) => 'wd:' + id).join(' ')} }
         ${label('?game', '?label')}
         OPTIONAL { ?game p:P577/psv:P577 [ wikibase:timeValue ?date ; wikibase:timePrecision ?prec ] }
@@ -232,14 +237,63 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
       if (r.steam && !g.steam) g.steam = Number(r.steam.value) || null;
       if (r.genreLabel) g.genreLabels.add(r.genreLabel.value);
       if (r.seriesLabel && !g.series) g.series = r.seriesLabel.value;
+      if (r.s) seriesIds.add(qid(r.s.value));
       if (r.composerLabel) g.composers.add(r.composerLabel.value);
     }
   }
+  };
+  log(`Fetching details for ${pop.size} games…`);
+  await details([...pop.keys()]);
+
+  // 5b. Series completion: once one game of a series is in, its other games are too (down to 3
+  // Wikipedia editions), so a series isn't missing its lesser-covered entries (the Shantae
+  // sequels have 10). Series come from the details above: asking Wikidata for "the series of
+  // these games" directly makes it scan every series there is (a 400 MB answer).
+  log(`Completing ${seriesIds.size} series…`);
+  const added = [];
+  await inBatches(
+    [...seriesIds],
+    40,
+    (batch) => `
+      SELECT ?game ?links WHERE {
+        VALUES ?series { ${values(batch)} }
+        ?game wdt:P179 ?series .
+        ${isGame()}
+        ?game wikibase:sitelinks ?links .
+        FILTER(?links >= 3)
+      }`,
+    (r) => {
+      const id = qid(r.game.value);
+      if (pop.has(id)) return;
+      pop.set(id, Number(r.links.value));
+      added.push(id);
+    },
+    { log: console.warn, label: 'series' },
+  );
+  log(`  ${added.length} more games`);
+  await details(added);
+
+  // English aliases ("FF7R", "Pirate's Curse"): searched and matched like the title.
+  const aliases = new Map();
+  await inBatches(
+    [...games.keys()],
+    300,
+    (batch) => `SELECT ?game ?alias WHERE { VALUES ?game { ${values(batch)} } ?game skos:altLabel ?alias . FILTER(LANG(?alias) = "en") }`,
+    (r) => {
+      const id = qid(r.game.value);
+      const a = r.alias.value.trim();
+      if (a.length < 2 || a.length > 80) return;
+      const list = aliases.get(id) ?? [];
+      if (list.length < 6 && !list.includes(a)) aliases.set(id, [...list, a]);
+    },
+    { log: console.warn },
+  );
 
   const catalog = [...games.values()]
     .map((g) => ({
       id: g.id,
       title: g.title,
+      ...(aliases.get(g.id)?.length ? { altTitles: aliases.get(g.id).filter((a) => a !== g.title) } : {}),
       year: g.year,
       ...(g.first && g.first.prec >= 10 ? { date: g.first.value.slice(0, g.first.prec >= 11 ? 10 : 7) } : {}),
       genres: bucketGenres(g.genreLabels),

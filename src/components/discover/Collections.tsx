@@ -7,7 +7,7 @@ import { getSubscriptions, runUpdate, setSubscribed, UPDATE_INTERVAL, useUpdateS
 import type { CatalogGame } from '../../types';
 
 // Film & TV groups mix films and series, so they're counted as "titles".
-const DOMAIN_KIND: Record<string, WorkKind | undefined> = { game: 'game', anime: 'anime', artist: 'artist' };
+const DOMAIN_KIND: Record<string, WorkKind | undefined> = { game: 'game', anime: 'anime' };
 
 export function Collections({
   catalog,

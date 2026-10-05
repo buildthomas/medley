@@ -1,7 +1,6 @@
 // Turns YouTube playlists/videos into works + tracks, and auto-finds a good source for a
 // catalog work. Games, films and series import a soundtrack playlist; anime import their
-// OP/ED songs (plus the OST) via importers/anime.ts; artists import their popular songs via
-// importers/artist.ts.
+// OP/ED songs (plus the OST) via importers/anime.ts.
 
 import { db } from '../db';
 import type { CatalogGame, Game, Source, Track, TrackRole, WorkKind } from '../types';
@@ -14,6 +13,7 @@ import {
   type ParsedLink,
   type PlaylistHit,
 } from './api';
+import { gamePlatforms, platformsIn } from './platforms';
 import { loadCatalog } from './catalog';
 import { kindOf } from './kinds';
 import { cleanGameName, cleanTrackTitle, detectTypes, normalize, parseChapters } from './parse';
@@ -38,13 +38,13 @@ export interface DraftGroup {
   key: string;
   title: string;
   catalogId: string | null;
-  /** Metadata for works that aren't in the bundled catalog (e.g. a Steam library lookup, a found artist). */
+  /** Metadata for works that aren't in the bundled catalog (e.g. a Steam library lookup). */
   meta?: CatalogGame;
   tracks: DraftTrack[];
 }
 
 export interface ImportDraft {
-  source: { id: string; kind: Source['kind']; title: string; channel: string };
+  source: { id: string; kind: Source['kind']; title: string; channel: string; label?: string };
   groups: DraftGroup[];
 }
 
@@ -159,7 +159,10 @@ function makeTrack(
 }
 
 export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): Promise<ImportDraft> {
-  const { matcher, artistNames } = await loadCatalog();
+  const { matcher } = await loadCatalog();
+  // Known performers: none since the artists catalog was removed; Topic channels, "feat." and
+  // soundtrack annotations still identify songs.
+  const artistNames = new Set<string>();
   const ctx = forceGame
     ? {
         kind: kindOf(forceGame),
@@ -304,6 +307,7 @@ export async function commitDraft(draft: ImportDraft): Promise<number> {
             ...(t.seq != null ? { seq: t.seq } : {}),
             ...(t.vocal != null ? { vocal: t.vocal } : {}),
             ...(t.artist ? { artist: t.artist } : {}),
+            ...(prev.sourceId === draft.source.id ? { pos: i } : {}),
           };
         added++;
         return {
@@ -314,6 +318,7 @@ export async function commitDraft(draft: ImportDraft): Promise<number> {
           ...(t.artist ? { artist: t.artist } : {}),
           ...(t.role ? { role: t.role } : {}),
           ...(t.seq != null ? { seq: t.seq } : {}),
+          pos: i,
           ...(t.vocal != null ? { vocal: t.vocal } : {}),
           start: t.start,
           end: t.end,
@@ -394,10 +399,44 @@ export interface Candidate {
   score: number;
 }
 
+// ---- same name, different kind of work -------------------------------------------------------
+
+const GAME_EVIDENCE =
+  /\b(video ?game|game|gameplay|pc|windows|ps[1-5]|playstation|xbox|gamecube|gcn|wii|switch|n64|snes|nes|sega|genesis|mega ?drive|game ?boy|gba|gbc|nds|3ds|psp|vita|8-?bit|16-?bit|chiptune|vgm)\b/i;
+// (\bfilm ?score without a closing boundary: channel names run words together, "FilmScoreBuff".)
+const FILM_EVIDENCE = /\b(film|movie|motion picture|cinema|score|soundtrack from the film|the film)\b|\bfilm ?score|\bmovie ?music/i;
+
+interface Clash {
+  kinds: Set<string>;
+  composers: string[]; // the other works' composers ("John Williams"): their names mean "that one"
+}
+
+function nameClash(work: CatalogGame, all: CatalogGame[]): Clash | null {
+  const name = normalize(work.title);
+  const kind = kindOf(work);
+  const others = all.filter((g) => g.id !== work.id && kindOf(g) !== kind && normalize(g.title) === name);
+  if (!others.length) return null;
+  return { kinds: new Set(others.map(kindOf)), composers: others.flatMap((g) => g.composers) };
+}
+
+function clashScore(work: CatalogGame, clash: Clash, text: string): number {
+  const otherComposer = clash.composers.some((c) => c && normalize(text).includes(normalize(c)));
+  if (kindOf(work) === 'game') {
+    if (otherComposer || FILM_EVIDENCE.test(text)) return -6;
+    return GAME_EVIDENCE.test(text) ? 4 : -2; // no evidence either way: probably the better-known film
+  }
+  // A film/series that shares its name with a game.
+  if (clash.kinds.has('game') && GAME_EVIDENCE.test(text)) return -6;
+  return FILM_EVIDENCE.test(text) ? 2 : 0;
+}
+
 export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHit[]): Promise<Candidate[]> {
-  const { matcher } = await loadCatalog();
+  const { matcher, games } = await loadCatalog();
   const vocab = vocabFor(game);
   const names = [game.title, ...(game.altTitles ?? [])].map((n) => ` ${normalize(n)} `).filter((n) => n.trim());
+  // A game and a film with the same name ("Harry Potter and the Chamber of Secrets"): playlists
+  // must show which one they are, or they're as likely the other's soundtrack.
+  const clash = nameClash(game, games);
   return hits
     .map((hit) => {
       const t = ` ${normalize(hit.title)} `;
@@ -426,6 +465,7 @@ export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHi
       // "Moana (2026)" when looking for the 2016 Moana: a different year means a different work.
       const years = [...hit.title.matchAll(/\b(19[5-9]\d|20[0-4]\d)\b/g)].map((m) => Number(m[1]));
       if (game.year && years.length) score += years.some((y) => Math.abs(y - game.year!) <= 1) ? 1 : -6;
+      if (clash) score += clashScore(game, clash, `${hit.title} ${hit.channel}`);
       if (vocab.good.test(hit.title)) score += 3;
       if (vocab.bad.test(hit.title)) score -= 6;
       if (OFFICIAL.test(hit.channel)) score += 1.5;
@@ -468,7 +508,6 @@ export interface AutoAddResult {
 /** Finds the best music source for a catalog work and imports it. */
 export async function autoAddGame(game: CatalogGame, pick?: PlaylistHit): Promise<AutoAddResult> {
   const kind = kindOf(game);
-  if (!pick && kind === 'artist') return (await import('./importers/artist')).importArtist(game);
   if (!pick && kind === 'anime') return (await import('./importers/anime')).importAnime(game);
 
   // Works with hand-picked sources (my-games.json) skip the search entirely.
@@ -499,11 +538,18 @@ export async function importSoundtrackPlaylist(game: CatalogGame): Promise<AutoA
   const candidates = await findCandidates(game);
   const best = await bestPlaylistDraft(game, candidates);
   if (best) {
+    const k = kindOf(game);
+    // A platform-specific soundtrack is labelled as that version ("PC").
+    if (k === 'game' && platformsIn(best.hit.title).length) best.draft.source.label = platformsIn(best.hit.title).join(' / ');
     let added = await commitDraft(best.draft);
     let sourceTitle = best.hit.title;
+    if (k === 'game') {
+      const versions = await importOtherVersions(game, best.hit);
+      added += versions.added;
+      if (versions.labels.length) sourceTitle += ` + ${versions.labels.join(', ')} versions`;
+    }
     // Films often have two albums: the score and the songs ("Across the Spider-Verse (Original
     // Score)" vs "(Soundtrack from and Inspired by…)"). Take the other one too when it exists.
-    const k = kindOf(game);
     if (k === 'film' || k === 'series') {
       const extra = await complementaryAlbum(game, candidates, best.hit, best.draft);
       if (extra) {
@@ -622,7 +668,7 @@ export async function replaceSource(game: CatalogGame, oldSourceId: string, pick
 }
 
 // ---------------------------------------------------------------------------
-// Tracks found one video at a time (anime OP/EDs, artist songs, a single song you add)
+// Tracks found one video at a time (anime OP/EDs)
 
 /** Save individually found videos as tracks of `work`, under one pseudo-source. */
 export async function commitFoundTracks(
@@ -661,4 +707,63 @@ export async function replaceTrackVideo(track: Track, videoId: string, duration?
     if (id !== track.id) await db.tracks.delete(track.id);
     return id;
   });
+}
+
+// ---- versions: one game, different soundtracks per platform ----------------------------------
+
+/**
+ * Playlists for one platform's version of a game ("… (GBA) Soundtrack"), best first. `named`:
+ * false when no playlist names that platform and these are game soundtracks that don't say which
+ * version they are (the person picking knows).
+ */
+export async function findVersionCandidates(
+  game: CatalogGame,
+  platform: string,
+  exclude: string[] = [],
+): Promise<{ candidates: Candidate[]; named: boolean }> {
+  const hits = await searchPlaylists(`${game.title} ${platform} soundtrack`);
+  const vocab = vocabFor(game);
+  // Strict: it must say it's music, and nothing like a walkthrough or gameplay video.
+  const music = (await rankPlaylistCandidates(game, hits)).filter(
+    (c) => c.score >= 5 && !exclude.includes(c.hit.id) && vocab.good.test(c.hit.title) && !vocab.bad.test(c.hit.title),
+  );
+  const named = music.filter((c) => platformsIn(c.hit.title).includes(platform));
+  if (named.length) return { candidates: named, named: true };
+  // Unlabelled ones must at least say they're from a game (not the film of the same name).
+  return {
+    candidates: music.filter((c) => !platformsIn(c.hit.title).length && GAME_EVIDENCE.test(`${c.hit.title} ${c.hit.channel}`)),
+    named: false,
+  };
+}
+
+/** Add a playlist as another version of a game (kept next to the existing tracks, not replacing them). */
+export async function importVersion(game: CatalogGame, hit: PlaylistHit, label?: string): Promise<number> {
+  const draft = await draftFromLink({ kind: 'playlist', id: hit.id }, game);
+  draft.source.label = label ?? (platformsIn(hit.title).join(' / ') || undefined);
+  return commitDraft(draft);
+}
+
+/**
+ * The soundtrack just imported names a platform ("(PC) - OST"): the game's other platforms may
+ * have had different music (Harry Potter on PC vs GameCube vs GBA), so import those too, each as
+ * its own labelled version. At most three more.
+ */
+async function importOtherVersions(game: CatalogGame, first: PlaylistHit): Promise<{ added: number; labels: string[] }> {
+  const covered = new Set(platformsIn(first.title));
+  const used = [first.id];
+  const out = { added: 0, labels: [] as string[] };
+  if (!covered.size) return out;
+  for (const platform of gamePlatforms(game.tags?.platform)) {
+    if (covered.has(platform) || out.labels.length >= 3) continue;
+    // Automatically only playlists that name the platform; unlabelled ones need a person.
+    const found = await findVersionCandidates(game, platform, used).catch(() => ({ candidates: [], named: false }));
+    const best = found.named ? await bestPlaylistDraft(game, found.candidates) : null;
+    if (!best) continue;
+    best.draft.source.label = platformsIn(best.hit.title).join(' / ');
+    out.added += await commitDraft(best.draft);
+    out.labels.push(best.draft.source.label);
+    used.push(best.hit.id);
+    for (const p of platformsIn(best.hit.title)) covered.add(p);
+  }
+  return out;
 }

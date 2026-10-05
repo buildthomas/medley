@@ -6,7 +6,6 @@ const DOMAINS = [
   { icon: '🎮', title: 'Games', text: 'Soundtracks from thousands of games, from NES classics to this year’s releases.' },
   { icon: '🌸', title: 'Anime', text: 'Every opening, ending and insert song, by name and artist, plus the score.' },
   { icon: '🎬', title: 'Film & TV', text: 'Disney and Pixar sing-alongs, musicals, scores and series themes.' },
-  { icon: '🎤', title: 'Artists', text: 'The songs of the artists you love, next to everything else.' },
 ];
 
 const FEATURES = [
@@ -32,13 +31,13 @@ export function Home({ signInRequired, onSignedIn, onNavigate }: { signInRequire
       )}
       <section className="home-hero">
         <div className="home-pitch">
-          <p className="eyebrow">Games · anime · film &amp; TV · artists</p>
+          <p className="eyebrow">Games · anime · film &amp; TV</p>
           <h1>
             Every story has <span className="dim">a sound.</span>
           </h1>
           <p className="home-lede">
-            Medley is your own radio for the music of the things you love: game soundtracks, anime openings, film and TV
-            songs and your favourite artists, shuffled your way.
+            Medley is your own radio for the music of the things you love: game soundtracks, anime openings and endings,
+            film and TV scores and songs, shuffled your way.
           </p>
           {signInRequired ? null : (
             <div className="row-actions">

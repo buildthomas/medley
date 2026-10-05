@@ -88,8 +88,9 @@ anime "OST"/"opening". Ranking also checks `altTitles` and penalises a year mism
 - `classifyScreenTrack(rawTitle, channel, ctx)` decides `vocal`/`role`/`artist` per track:
   explicit "instrumental"/"score" wins; uploads by a performer's *Topic* channel or a known artist
   are songs (unless the performer is the film's composer → score); titles like "(From "Frozen")",
-  "feat.", "- Lyrics", or a bracketed work name → song; "Song – Artist" splits when one side is a
-  known artist. In a **musical**, a track with no other clue is a song unless it looks like a
+  "feat.", "- Lyrics", or a bracketed work name → song; "Song – Artist" splits when one side lists
+  several performers. (Known-artist names came from the removed artists catalog; that list is now
+  empty.) In a **musical**, a track with no other clue is a song unless it looks like a
   score cue ("Overture", "Main Title"…).
 
 ### Anime (`importers/anime.ts`)
@@ -127,19 +128,26 @@ narrow imports can be widened. `AnimeListImport` matches pasted titles against t
 catalog (titles + `altTitles`), optionally expands to every season (`franchiseOf`), and queues
 them with `runBulk(…, { topUp: true })`, which doesn't skip titles already in the library.
 
-### Artists (`importers/artist.ts`)
+### Games that share a name with a film, and platform versions
 
-- `findArtistSongs(artist)`: 4 searches (name, "official music video", "official audio", "topic"),
-  keeps uploads by the artist (`isArtistUpload`: catalog `ytChannel`, channel name match, VEVO,
-  "- Topic"), 80–660 s, no live/cover/dance-practice/stage videos. Max 30 songs, deduped by
-  cleaned title (`cleanSongTitle`: strips "Official Video", the artist prefix, quotes, 「」).
-- `parseSongVideo(videoId)` for *Add a song*: reads "Provided to YouTube by" descriptions
-  (song · artist · featured), else "Artist - Song", else the channel name. Credits: "A, B - Song"
-  → the uploading channel's artist is the main one, the rest featured; "feat./ft./featuring X"
-  and "(with X)" are pulled out of the title (a bare "with" isn't: "Die With A Smile"); a known
-  artist name with commas/ampersands stays whole ("Earth, Wind & Fire").
-- `addSong(song)` files it under the artist (`artistWork`: a catalog artist when the name
-  matches, else a new `u:artist-<slug>` work).
+- **Name clash** (`nameClash` / `clashScore`): when a game has the same name as a film or series in
+  Medley ("Harry Potter and the Chamber of Secrets"), a playlist must show which one it is. For the
+  game: +4 with game evidence (a platform, "video game", "OST"), −6 with film evidence ("film",
+  "movie", "motion picture", "FilmScore…" channels, the film's composer), −2 with neither. The
+  reverse for the film.
+- **Versions** (`src/lib/platforms.ts`): when the chosen game soundtrack names a platform
+  ("(PC) - OST"), the importer looks for the game's other platforms' soundtracks
+  (`findVersionCandidates`: must name the platform, say it's music, no walkthroughs) and imports up
+  to three more, each a source with `label` ("GBA", "GBC"). The title page groups tracks by
+  version; *Add a version* searches one platform and, when no playlist names it, offers unlabelled
+  game soundtracks (with game evidence) to label by hand.
+
+### Album order (`src/lib/trackOrder.ts`)
+
+Tracks store their playlist position (`pos`) at import and in the weekly sync. `albumOrder`: anime
+songs first (OP1, OP2…, ED…, insert), then sources in the order they were added, then `pos`, then
+the slice start (chapters of one long video). Older libraries get `pos` backfilled from the
+(cached) playlists: in the background after start-up, and immediately when a title page opens.
 
 ### Saving (`commitDraft`)
 

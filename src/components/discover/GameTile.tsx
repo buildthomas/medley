@@ -28,12 +28,12 @@ export function GameTile({
   const kind = kindLabel(kindOf(game));
   const sub = [
     showKind ? kind.icon : null,
-    kindOf(game) === 'artist' ? (game.artist?.country ?? game.genres[0]) : game.year,
+    game.year,
     state.upcoming ? 'upcoming' : null,
     state.failed ? 'nothing found' : null,
   ].filter(Boolean);
   return (
-    <div className={`tile ${state.inLibrary ? 'owned' : ''} ${kindOf(game) === 'artist' ? 'tile-artist' : ''}`}>
+    <div className={`tile ${state.inLibrary ? 'owned' : ''}`}>
       <button className="tile-art" onClick={() => onOpen(game)} title={game.title}>
         <Cover game={game} />
         {state.inLibrary && <span className="tile-badge">✓</span>}
@@ -47,7 +47,7 @@ export function GameTile({
             ▶
           </button>
         ) : state.upcoming ? null : (
-          <button className="tile-btn" onClick={() => onAdd(game)} title={kindOf(game) === 'artist' ? 'Add their popular songs' : 'Find and add the soundtrack'}>
+          <button className="tile-btn" onClick={() => onAdd(game)} title="Find and add the soundtrack">
             +
           </button>
         )}

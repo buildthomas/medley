@@ -27,6 +27,7 @@ function asCatalog(g: Game, cat: CatalogGame | undefined): CatalogGame {
 async function syncOne(source: Source, game: CatalogGame, result: SyncResult) {
   const draft = await draftFromLink({ kind: 'playlist', id: source.id }, game);
   const fresh = new Map((draft.groups[0]?.tracks ?? []).map((t) => [t.key, t]));
+  const position = new Map([...fresh.keys()].map((k, i) => [k, i]));
   const existing = await db.tracks.where('sourceId').equals(source.id).toArray();
   const have = new Map(existing.map((t) => [t.id, t]));
   const updates: { key: string; changes: Partial<Track> }[] = [];
@@ -39,9 +40,14 @@ async function syncOne(source: Source, game: CatalogGame, result: SyncResult) {
         updates.push({ key: t.id, changes: { unavailable: true } });
         result.removed++;
       }
-    } else if (!t.customTitle && d.title !== t.title) {
-      updates.push({ key: t.id, changes: { title: d.title, types: d.types } });
-      result.renamed++;
+    } else {
+      const changes: Partial<Track> = {};
+      if (!t.customTitle && d.title !== t.title) {
+        Object.assign(changes, { title: d.title, types: d.types });
+        result.renamed++;
+      }
+      if (t.pos !== position.get(t.id)) changes.pos = position.get(t.id);
+      if (Object.keys(changes).length) updates.push({ key: t.id, changes });
     }
   }
   for (const d of fresh.values()) {
@@ -59,6 +65,7 @@ async function syncOne(source: Source, game: CatalogGame, result: SyncResult) {
       types: d.types,
       vocal: d.vocal,
       sourceId: source.id,
+      pos: position.get(d.key),
       liked: false,
       banned: false,
       unavailable: false,

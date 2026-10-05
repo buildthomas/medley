@@ -1,5 +1,5 @@
 // npm run catalog: rebuild the bundled catalogs in src/data/ (games, films & series, anime,
-// artists, collections). `--only games,anime` limits it to some domains; the collections file
+// collections). `--only games,anime` limits it to some domains; the collections file
 // keeps the other domains' groups from the previous build.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

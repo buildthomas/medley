@@ -171,7 +171,7 @@ export function ListenView({
     return (
       <Empty>
         <h2>Your library is empty</h2>
-        <p>Pick games, anime, films or artists in Discover and Medley finds their music on YouTube.</p>
+        <p>Pick games, anime, films or series in Discover and Medley finds their music on YouTube.</p>
         <div className="row-actions center">
           <button className="primary" onClick={() => goTo('discover')}>
             Open Discover

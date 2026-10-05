@@ -5,7 +5,6 @@
 //   POST   /api/session { code } · DELETE        sign in / out (hosted, invite-only)
 //   GET    /api/search?type=playlist|video&q=   YouTube search (keyless scraping, server/youtube.ts)
 //   GET    /api/playlist?id=  /api/video?id=    YouTube playlist / video details
-//   GET    /api/artists/search?q=               MusicBrainz artist search
 //   GET    /api/steam/owned?profile=            Steam library (needs STEAM_API_KEY)
 //   GET    /api/data?name=                      refreshed catalog file from the data dir
 //   GET    /api/my-games                        personal games (config dir)
@@ -20,7 +19,6 @@ import { DATA_FILES } from '../scripts/build-all.mjs';
 import { readJson, writeFileAtomic } from '../scripts/fsutil.mjs';
 import { catalogsAreStale, readMyGames, refreshStatus, requestRefresh, runRefresh } from '../scripts/refresh.mjs';
 import type { CatalogGame } from '../src/types.ts';
-import { searchArtists } from './artists.ts';
 import { createAuth } from './auth.ts';
 import { steamOwnedGames } from './steam.ts';
 import { getPlaylist, getVideo, search } from './youtube.ts';
@@ -161,7 +159,6 @@ export function createApi(opts: ApiOptions) {
         case '/api/search':
         case '/api/playlist':
         case '/api/video':
-        case '/api/artists/search':
           if (limited(req)) return send(429, { error: 'Too many requests; slow down a little.' });
       }
       switch (url.pathname) {
@@ -176,8 +173,6 @@ export function createApi(opts: ApiOptions) {
           return send(200, await cached(`v:${q('id')}`, () => getVideo(q('id'))));
         case '/api/steam/owned':
           return send(200, await steamOwnedGames(q('profile'), opts.steamKey));
-        case '/api/artists/search':
-          return send(200, await cached(`a:${q('q').toLowerCase()}`, () => searchArtists(q('q'))));
         case '/api/data': {
           const name = q('name');
           if (!DATA_FILES.includes(name)) throw new Error('Unknown data file');

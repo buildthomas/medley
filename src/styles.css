@@ -762,30 +762,8 @@ button.now-cover-btn:focus-visible {
   margin-bottom: 8px;
 }
 
-.lib-row {
-  display: grid;
-  grid-template-columns: auto auto 30px minmax(0, 2fr) minmax(0, 1.5fr) 80px 70px auto;
-  gap: 10px;
-  align-items: center;
-  padding: 9px 4px;
-  cursor: pointer;
-}
-.lib-row:hover {
-  background: var(--bg-raised);
-}
-.lib-games li.disabled .lib-title {
-  color: var(--muted);
-  text-decoration: line-through;
-}
-.lib-title {
-  font-weight: 600;
-}
-.caret {
-  color: var(--muted);
-  width: 10px;
-}
 .game-editor {
-  padding: 4px 0 16px 28px;
+  padding: 4px 12px 16px 70px;
 }
 .editor-fields {
   display: flex;
@@ -897,9 +875,6 @@ tr.excluded {
   }
   .hide-sm {
     display: none;
-  }
-  .lib-row {
-    grid-template-columns: auto auto 30px minmax(0, 1fr) auto auto;
   }
   .listen-layout.compact {
     left: 10px;
@@ -1063,8 +1038,9 @@ code {
 }
 
 .lib-cover {
-  width: 30px;
-  border-radius: 4px;
+  width: 44px;
+  border-radius: 6px;
+  flex: none;
 }
 .lib-cover.cover-placeholder span,
 .lib-cover.cover-placeholder small {
@@ -1421,5 +1397,197 @@ button.big {
   button,
   a {
     -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ---------- Library (LibraryView.tsx) ---------- */
+.library {
+  display: grid;
+  gap: 12px;
+  padding-top: 8px;
+}
+.lib-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.lib-search {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.lib-selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lib-selects select {
+  max-width: 190px;
+}
+.lib-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+.lib-titles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.lib-title-item {
+  border-radius: 10px;
+}
+.lib-title-item.editing {
+  background: var(--bg-raised);
+}
+.lib-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 10px;
+}
+.lib-title-row:hover {
+  background: var(--bg-raised);
+}
+button.lib-open {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+button.lib-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.lib-name {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.lib-name-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lib-title-item.paused .lib-name-title,
+.lib-title-item.paused .lib-cover {
+  opacity: 0.5;
+}
+.lib-flag {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--bad);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+.lib-counts {
+  white-space: nowrap;
+}
+.lib-edit {
+  width: 36px;
+  text-align: right;
+}
+.lib-none {
+  padding: 20px 8px;
+}
+.lib-tracks-list .track-row {
+  padding: 6px 8px;
+}
+
+/* An on/off switch (a checkbox underneath). */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+  flex: none;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.switch span[aria-hidden] {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.15s;
+}
+.switch span[aria-hidden]::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.15s;
+}
+.switch input:checked + span[aria-hidden] {
+  background: var(--accent);
+}
+.switch input:checked + span[aria-hidden]::after {
+  transform: translateX(14px);
+  background: var(--accent-ink);
+}
+.switch input:focus-visible + span[aria-hidden] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.show-sm {
+  display: none;
+}
+@media (max-width: 700px) {
+  .show-sm {
+    display: inline;
+  }
+  .lib-counts {
+    display: none;
+  }
+  .lib-name-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .lib-selects {
+    width: 100%;
+  }
+  .lib-selects select {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .game-editor {
+    padding: 4px 8px 16px;
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CatalogGame } from '../types';
 import { apiUrl } from './api';
-import { createCatalogMatcher, normalize } from './parse';
+import { createCatalogMatcher } from './parse';
 
 export interface CollectionList {
   id: string;
@@ -10,7 +10,7 @@ export interface CollectionList {
 }
 export interface CollectionGroup {
   id: string;
-  /** game | screen | anime | artist (absent = game) */
+  /** game | screen | anime (absent = game) */
   domain?: string;
   title: string;
   description: string;
@@ -33,8 +33,6 @@ async function fetchJson<T>(path: string): Promise<T | null> {
 
 interface Loaded {
   games: CatalogGame[];
-  /** Normalised names of all known artists, for telling "Artist - Song" from "Song - Artist". */
-  artistNames: Set<string>;
   byId: Map<string, CatalogGame>;
   matcher: ReturnType<typeof createCatalogMatcher>;
   collections: Collections;
@@ -47,7 +45,6 @@ const DOMAIN_FILES = {
   catalog: () => import('../data/catalog.json'),
   screen: () => import('../data/screen.json'),
   anime: () => import('../data/anime.json'),
-  artists: () => import('../data/artists.json'),
 } as const;
 
 /**
@@ -92,10 +89,9 @@ export function loadCatalog(): Promise<Loaded> {
       ],
     };
     // Title matching (guessing which game a video belongs to) only makes sense for games:
-    // films like "Up" or artists like "Queen" would match all sorts of video titles.
+    // films like "Up" would match all sorts of video titles.
     const matcher = createCatalogMatcher(games.filter((g) => !g.kind || g.kind === 'game'));
-    const artistNames = new Set(games.filter((g) => g.kind === 'artist').map((g) => normalize(g.title)));
-    return { games, byId: new Map(games.map((g) => [g.id, g])), matcher, collections, artistNames };
+    return { games, byId: new Map(games.map((g) => [g.id, g])), matcher, collections };
   })();
   return loading;
 }

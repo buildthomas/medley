@@ -8,7 +8,7 @@ filtered by it. Navigation is `src/lib/nav.ts`. Keep new features inside this mo
 
 | Primitive | What it is | Its page |
 |---|---|---|
-| **Title** | A game, anime, film, series or artist (`CatalogGame` / library `Game`, by `kind`) | Title page (`GameDetail.tsx`) |
+| **Title** | A game, anime, film or series (`CatalogGame` / library `Game`, by `kind`) | Title page (`GameDetail.tsx`) |
 | **Track** | One playable song or cue in your library (`Track`) | Track page (`TrackDetail.tsx`) |
 | **List** | A curated group of titles: a collection list, a shelf, a franchise/series, "What's new" | Discover → Browse, focused on the list |
 | **Tag** | A property titles share: composer, studio, developer, publisher, genre, platform, keyword, franchise | Discover → Browse, filtered by the tag |
@@ -21,11 +21,11 @@ User-facing words: "title(s)" or the kind's own word (`kindLabel`, `titlesLabel`
 | Page | Job | Reached from |
 |---|---|---|
 | **Home** | What Medley is; sign-in on a hosted Medley | The logo; the only page when signed out (hosted) |
-| **Discover** (tab, default) | Find titles: shelves per domain, Browse with filters, Series & franchises, search (titles, your tracks, MusicBrainz artists) | Tab; any tag or list link |
-| **Title page** (overlay) | What the title is (credits, tags, links, cover credit), its tracks *with labels*, add / play / shuffle / remove / change source; anime songs list | Any title mention (tile, now playing, a track's "from", track rows' title, Library row, artist credits) |
+| **Discover** (tab, default) | Find titles: shelves per domain, Browse with filters, Series & franchises, search (titles incl. aliases and "FFVII"-style abbreviations, your tracks) | Tab; any tag or list link |
+| **Title page** (overlay) | What the title is (credits, tags, links, cover credit), its tracks *with labels*, add / play / shuffle / remove / change source; tracks grouped by version (game platforms, anime songs vs score); *Add a version*; anime songs list | Any title mention (tile, now playing, a track's "from", track rows' title, Library row, artist credits) |
 | **Track page** (overlay) | Everything about one track: labels (kind & number, voice, types: editable), length, play stats, source, play / like / never / rename, *Wrong video?* (swap the upload), links to its title and credited artists | Any track name (title page, up next, recently played, program, search results, now playing, Library ⓘ) |
 | **Listen** (tab) | Now playing, up next, program, recently played, filters | Tab; ⤢ on the docked player |
-| **Library** (tab) | Everything you own, in bulk: on/off in rotation, sort, fix names and labels, remove | Tab |
+| **Library** (tab) | Everything you own, in bulk: Titles and Tracks views, filters, play the filtered set, rotation switches, edit details | Tab |
 | **Add link** (tab) | Bring music in: YouTube links, a single song, anime openings lists, Steam; backup, storage, sign-out | Tab |
 
 ## Links (the rule)
@@ -49,8 +49,8 @@ User-facing words: "title(s)" or the kind's own word (`kindLabel`, `titlesLabel`
    rename.
 4. *Fix a mislabelled song:* any list → track name → Labels (kind OP/ED + number, sung/instrumental,
    types). Labels drive the Listen filters.
-5. *Search:* Discover search → titles (tiles), your tracks (rows: ▶ or open), artists not in the
-   catalog yet (MusicBrainz).
+5. *Search:* Discover search → titles (tiles), your tracks (rows: ▶ or open).
+6. *Listen to part of your library:* Library → filter (kind, status, OP/ED, sung…) → ▶ Play / ⤮ Shuffle.
 
 ## Adding UI
 

@@ -6,7 +6,7 @@
 // history entries, so the browser's back button (and Android's) closes the top page and every
 // page can be linked to.
 //
-//   openTitle(id)            a game, anime, film, series or artist
+//   openTitle(id)            a game, anime, film or series
 //   openTrack(id)            one track in the library
 //   openTag(kind, value)     Discover, filtered by a composer, studio, genre, series, …
 //   goTab(tab)               switch tab (closes overlays)

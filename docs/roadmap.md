@@ -22,3 +22,6 @@
   new list-like names may need adding.
 - **Library sync across devices** (hosted): would need server-side storage per user; today
   libraries move by Backup/Restore.
+- **Artists** (removed Oct 2026, in git history: `scripts/artist-builder.mjs`,
+  `src/lib/importers/artist.ts`, `server/artists.ts`, the *Add a song* card). Bring back only if wanted.
+- **Versions beyond platforms** (e.g. original vs remastered soundtrack) could reuse `Source.label`.

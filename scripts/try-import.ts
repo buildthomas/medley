@@ -6,7 +6,7 @@
 //   npx tsx scripts/try-import.ts candidates film moana      (ranked playlists + vocal share)
 //   npx tsx scripts/try-import.ts songs anime chainsaw man   (each OP/ED's top YouTube candidates + scores)
 //
-// kind: game | film | series | anime | artist. The title is a case-insensitive substring;
+// kind: game | film | series | anime. The title is a case-insensitive substring;
 // the most popular match wins.
 
 import 'fake-indexeddb/auto';
@@ -64,5 +64,7 @@ ${theme.type}${theme.seq ?? ''} "${theme.song}" by ${theme.artists.join(', ')}`)
   for (const t of tracks)
     console.log(`  ${(t.role ?? '-').padEnd(6)}${String(t.seq ?? '').padEnd(3)}${t.vocal ? '♪' : ' '} ${t.title}${t.artist ? ` — ${t.artist}` : ''} [${t.duration ?? '?'}s]`);
   console.log(`${tracks.length} tracks, ${tracks.filter((t) => t.vocal).length} vocal`);
+  for (const src of await db.sources.toArray())
+    console.log(`source: ${src.label ? `[${src.label}] ` : ''}${src.title} (${src.channel}) · ${tracks.filter((t) => t.sourceId === src.id).length} tracks`);
 }
 process.exit(0);

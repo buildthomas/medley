@@ -8,6 +8,7 @@ import { Home } from './components/Home';
 import { Logo } from './components/Logo';
 import { Overlays } from './components/Overlays';
 import { setTabHandler } from './lib/nav';
+import { backfillPositions } from './lib/trackOrder';
 import { NewArrivals } from './components/NewArrivals';
 import { ListenView } from './components/ListenView';
 import { db } from './db';
@@ -54,6 +55,7 @@ export function App() {
       await resumeInterrupted();
       await ensureMyGames();
       await runUpdate();
+      void backfillPositions(); // album order for libraries imported before positions were stored
     }, 4000);
     return () => window.clearTimeout(timer);
   }, []);

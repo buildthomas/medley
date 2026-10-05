@@ -3,10 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteGame } from '../../db';
 import { franchiseOf } from '../../lib/catalog';
 import { coverCredit } from '../../lib/credits';
-import { autoAddGame, findCandidates, replaceSource, type Candidate } from '../../lib/importer';
+import { albumOrder, ensurePositions } from '../../lib/trackOrder';
+import { autoAddGame, findCandidates, findVersionCandidates, importVersion, replaceSource, type Candidate } from '../../lib/importer';
+import { gamePlatforms } from '../../lib/platforms';
 import { kindLabel, kindOf } from '../../lib/kinds';
 import { importAnime, useAnimeScope, type AnimeScope } from '../../lib/importers/anime';
-import type { AnimeTheme, CatalogGame, GameTags } from '../../types';
+import type { AnimeTheme, CatalogGame, GameTags, Source, Track } from '../../types';
 import { AnimeScopePicker } from '../AnimeScopePicker';
 import type { Session } from '../../useSession';
 import { Cover } from './Cover';
@@ -60,30 +62,23 @@ export function GameDetail({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const sorted = useMemo(
-    () => tracks.slice().sort((a, b) => a.sourceId.localeCompare(b.sourceId) || (a.start ?? 0) - (b.start ?? 0)),
-    [tracks],
-  );
+  const sorted = useMemo(() => albumOrder(tracks, sources), [tracks, sources]);
+  // Older imports don't know their playlist positions yet: fill them in now (lib/trackOrder.ts).
+  useEffect(() => {
+    void ensurePositions(game.id);
+  }, [game.id]);
   const franchise = franchiseOf(game);
   const credit = coverCredit(game);
   const kind = kindOf(game);
-  const isArtist = kind === 'artist';
   const dev = game.tags?.developer?.slice(0, 2).join(', ');
   const pub = game.tags?.publisher?.slice(0, 2).join(', ');
   // The credit line under the title, worded per kind of work.
-  const people = isArtist
-    ? [
-        game.artist?.type === 'group' ? 'Group' : 'Artist',
-        game.artist?.country,
-        game.artist?.since && `since ${game.artist.since}`,
-        pub && `on ${pub}`,
-      ].filter(Boolean)
-    : [
-        kindLabel(kind).one !== 'game' && kindLabel(kind).one.replace(/^./, (c) => c.toUpperCase()),
-        game.year,
-        dev && (kind === 'film' ? `directed by ${dev}` : `by ${dev}`),
-        pub && `published by ${pub}`,
-      ].filter(Boolean);
+  const people = [
+    kindLabel(kind).one !== 'game' && kindLabel(kind).one.replace(/^./, (c) => c.toUpperCase()),
+    game.year,
+    dev && (kind === 'film' ? `directed by ${dev}` : `by ${dev}`),
+    pub && `published by ${pub}`,
+  ].filter(Boolean);
   // Which of the anime's songs are in the library already.
   const themeTrack = (th: AnimeTheme) =>
     tracks.find((t) => t.role === (th.type === 'IN' ? 'insert' : th.type.toLowerCase()) && t.title === th.song);
@@ -100,7 +95,7 @@ export function GameDetail({
       setAddingTheme(null);
     }
   }
-  const playLabel = isArtist ? 'songs' : kind === 'anime' ? 'songs & soundtrack' : 'soundtrack';
+  const playLabel = kind === 'anime' ? 'songs & soundtrack' : 'soundtrack';
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -187,14 +182,12 @@ export function GameDetail({
                   <button onClick={() => playAll(true)} title="Play every track in random order, then back to shuffle">
                     ⤮ Shuffle
                   </button>
-                  {!isArtist && (
-                    <button
+                                      <button
                       disabled={busy}
                       onClick={() => run(async () => setCandidates(candidates ? null : await findCandidates(game)))}
                     >
                       {candidates ? 'Hide sources' : 'Change source'}
                     </button>
-                  )}
                   {kind === 'anime' && missingThemes.length > 0 && (
                     <button
                       disabled={busy}
@@ -225,13 +218,11 @@ export function GameDetail({
                       })
                     }
                   >
-                    {busy ? 'Searching…' : isArtist ? '+ Add popular songs' : kind === 'anime' ? ANIME_ADD_LABEL[animeScope] : '+ Add soundtrack'}
+                    {busy ? 'Searching…' : kind === 'anime' ? ANIME_ADD_LABEL[animeScope] : '+ Add soundtrack'}
                   </button>
-                  {!isArtist && (
-                    <button disabled={busy} onClick={() => run(async () => setCandidates(await findCandidates(game)))}>
+                                      <button disabled={busy} onClick={() => run(async () => setCandidates(await findCandidates(game)))}>
                       Pick a source
                     </button>
-                  )}
                 </>
               )}
               {game.links?.map((l) => (
@@ -347,35 +338,176 @@ export function GameDetail({
 
           <div className="detail-tracks">
             <h3>
-              {isArtist ? 'Songs' : 'Soundtrack'} {inLibrary && <span className="muted">· {tracks.length} tracks</span>}
+              Soundtrack {inLibrary && <span className="muted">· {tracks.length} tracks</span>}
             </h3>
             {!inLibrary && <p className="muted">Not in your library yet.</p>}
-            {sources.length > 0 && (
-              <p className="muted small">
-                From{' '}
-                {sources.map((s, i) => (
-                  <span key={s.id}>
-                    {i > 0 && ', '}
-                    <a
-                      href={s.kind === 'playlist' ? `https://www.youtube.com/playlist?list=${s.id}` : `https://www.youtube.com/watch?v=${s.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {s.title}
-                    </a>
-                    {s.channel && ` (${s.channel})`}
-                  </span>
-                ))}
-              </p>
-            )}
-            <ol className="track-list">
-              {sorted.map((t) => (
-                <TrackRow key={t.id} track={t} showArtist={!isArtist} onPlay={() => session.playNow(t.id)} />
-              ))}
-            </ol>
+            <Soundtrack game={game} sorted={sorted} sources={sources} session={session} showArtist />
+            {kind === 'game' && inLibrary && <AddVersion game={game} sources={sources} />}
           </div>
         </div>
       </article>
+    </div>
+  );
+}
+
+const sourceUrl = (s: Source) =>
+  s.kind === 'playlist' ? `https://www.youtube.com/playlist?list=${s.id}` : s.kind === 'video' ? `https://www.youtube.com/watch?v=${s.id}` : null;
+
+/**
+ * A title's tracks, grouped by where they came from when there's more than one source: a game's
+ * platform versions ("PC", "GBA"), an anime's songs vs its score, a film's score vs songs album.
+ */
+function Soundtrack({
+  game,
+  sorted,
+  sources,
+  session,
+  showArtist,
+}: {
+  game: CatalogGame;
+  sorted: Track[];
+  sources: Source[];
+  session: Session;
+  showArtist: boolean;
+}) {
+  const groups = sources
+    .slice()
+    .sort((a, b) => a.importedAt - b.importedAt)
+    .map((s) => ({ source: s, tracks: sorted.filter((t) => t.sourceId === s.id) }))
+    .filter((g) => g.tracks.length);
+  const row = (t: Track) => <TrackRow key={t.id} track={t} showArtist={showArtist} onPlay={() => session.playNow(t.id)} />;
+
+  if (groups.length <= 1) {
+    const s = groups[0]?.source;
+    const url = s && sourceUrl(s);
+    return (
+      <>
+        {s && (
+          <p className="muted small">
+            From {url ? <a href={url} target="_blank" rel="noreferrer">{s.title}</a> : s.title}
+            {s.channel && ` (${s.channel})`}
+          </p>
+        )}
+        <ol className="track-list">{sorted.map(row)}</ol>
+      </>
+    );
+  }
+
+  async function removeVersion(s: Source, count: number) {
+    if (!confirm(`Remove “${s.label ?? s.title}” (${count} tracks) from ${game.title}?`)) return;
+    await db.transaction('rw', db.tracks, db.sources, async () => {
+      await db.tracks.where('sourceId').equals(s.id).filter((t) => t.gameId === game.id).delete();
+      const rest = s.gameIds.filter((id) => id !== game.id);
+      if (rest.length) await db.sources.update(s.id, { gameIds: rest });
+      else await db.sources.delete(s.id);
+    });
+  }
+
+  return (
+    <div className="versions">
+      {groups.map(({ source: s, tracks }) => {
+        const url = sourceUrl(s);
+        const playable = tracks.filter((t) => !t.banned && !t.unavailable).map((t) => t.id);
+        return (
+          <section key={s.id} className="version">
+            <header className="version-head">
+              <h4>{s.label ? `${s.label} version` : s.title}</h4>
+              <span className="muted small truncate">
+                {s.label && (url ? <a href={url} target="_blank" rel="noreferrer">{s.title}</a> : s.title)}
+                {s.label ? ' · ' : ''}
+                {tracks.length} tracks
+              </span>
+              <span className="spacer" />
+              {playable.length > 0 && (
+                <button className="small-btn" onClick={() => session.playProgram(`${game.title}: ${s.label ?? s.title}`, playable)}>
+                  ▶ Play
+                </button>
+              )}
+              <button className="link small" onClick={() => removeVersion(s, tracks.length)} title="Remove these tracks from this title">
+                remove
+              </button>
+            </header>
+            <ol className="track-list">{tracks.map(row)}</ol>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Many 2000s multi-platform games were different games per platform, with different music:
+ * add another platform's soundtrack as its own version.
+ */
+function AddVersion({ game, sources }: { game: CatalogGame; sources: Source[] }) {
+  const covered = new Set(sources.flatMap((s) => (s.label ? s.label.split(' / ') : [])));
+  const platforms = gamePlatforms(game.tags?.platform).filter((p) => !covered.has(p));
+  const [platform, setPlatform] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[] | null>(null);
+  const [named, setNamed] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  if (platforms.length < 1 || gamePlatforms(game.tags?.platform).length < 2) return null;
+
+  async function pick(p: string) {
+    setPlatform(p);
+    setCandidates(null);
+    setMessage(null);
+    setBusy(true);
+    try {
+      const found = await findVersionCandidates(game, p, sources.map((s) => s.id));
+      setCandidates(found.candidates);
+      setNamed(found.named);
+    } catch (e) {
+      setMessage((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="add-version">
+      <p className="muted small">
+        Different music on another platform? Add that version:{' '}
+        {platforms.map((p) => (
+          <button key={p} className={`chip ${platform === p ? 'on' : ''}`} disabled={busy} onClick={() => pick(p)}>
+            {p}
+          </button>
+        ))}
+      </p>
+      {busy && <p className="muted small">Searching…</p>}
+      {candidates && !named && candidates.length > 0 && (
+        <p className="muted small">No playlist names the {platform} version. These game soundtracks don't say which version they are:</p>
+      )}
+      {candidates && (
+        <ul className="candidates">
+          {candidates.slice(0, 6).map((c) => (
+            <li key={c.hit.id}>
+              <a href={`https://www.youtube.com/playlist?list=${c.hit.id}`} target="_blank" rel="noreferrer">
+                {c.hit.title}
+              </a>
+              <span className="muted small">
+                {c.hit.channel} · {c.hit.videoCount ?? '?'} videos
+              </span>
+              <button
+                className="small-btn"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  const n = await importVersion(game, c.hit, named ? undefined : platform ?? undefined).catch(() => 0);
+                  setBusy(false);
+                  setCandidates(null);
+                  setMessage(n ? `Added the ${platform} version (${n} tracks).` : 'Nothing new in that playlist.');
+                }}
+              >
+                Add
+              </button>
+            </li>
+          ))}
+          {!candidates.length && <li className="muted">No {platform} soundtrack found on YouTube.</li>}
+        </ul>
+      )}
+      {message && <p className="small">{message}</p>}
     </div>
   );
 }

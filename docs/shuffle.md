@@ -1,6 +1,6 @@
 # Shuffle, filters and the playback session
 
-**Summary:** `pickNext` (src/lib/picker.ts) chooses a **work** (game, film, anime, artist) first,
+**Summary:** `pickNext` (src/lib/picker.ts) chooses a **work** (game, film, series, anime) first,
 then a **track** within it, so big soundtracks don't dominate. Filters decide what's eligible.
 `useSession` keeps a 4-track queue (or plays an explicit *program* first), records plays/skips,
 and persists itself to the URL and localStorage so a reload resumes.
@@ -42,7 +42,7 @@ skip is just a normal play. Both are written in one transaction with the next pl
 | Length (`lengthOf`) | `jingle` < 30 s, `short` < 1:30, `standard`, `long` > 6 min | Default filter: `lengths: { jingle: 'out' }` (fanfares, stingers) |
 | Voice (`voiceOf`) | `vocal`, `instrumental` | `track.vocal` ?? role ≠ `score` ?? `types` has `vocal` |
 | Role | `op`, `ed`, `insert`, `score`, `song` | `track.role` ?? (`vocal` type → song, else score) |
-| Kind | `game`, `film`, `series`, `anime`, `artist` | From the work |
+| Kind | `game`, `film`, `series`, `anime` | From the work |
 
 ## Filters (`Filters` in src/types.ts)
 
@@ -56,7 +56,8 @@ chips but keeps the sliders.
 
 - Live queries: all works, all tracks, last 400 plays.
 - Queue effect: drops queued tracks that no longer pass filters, tops up to 4.
-- **Program:** `playProgram(label, ids, { shuffle })` plays an explicit list first (title page
+- **Program:** `playProgram(label, ids, { shuffle })` plays an explicit list first (in album order
+  from title pages, `lib/trackOrder.ts`) (title page
   ▶ Play / ⤮ Shuffle, *Play what's new*, track search *Play all*). It ignores filters except
   banned/unavailable; `prev()` puts the current track back on it; `stopProgram()` returns to the
   shuffle. Persisted with the session.

@@ -16,7 +16,7 @@ export function Overlays({ session }: { session: Session }) {
 
   if (top.type === 'track') return <TrackDetail key={top.id} id={top.id} session={session} />;
 
-  // A title from the catalog, or one that only exists in the library (your own, a found artist).
+  // A title from the catalog, or one that only exists in the library (your own games).
   const libraryGame = session.gameMap.get(top.id);
   const game: CatalogGame | undefined =
     cat?.byId.get(top.id) ?? (libraryGame ? { ...libraryGame, franchise: libraryGame.franchise ?? undefined, pop: 0 } : undefined);

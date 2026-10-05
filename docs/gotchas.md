@@ -45,7 +45,7 @@
 18. **"Nintendo first-party" lacked Mario Kart World / DK Bananza** → they were in the Switch 2
     list, but the home shelf only showed Switch → *Latest from Nintendo* merges both consoles by date.
 19. **SPARQL "Unexpected end of JSON"** → Wikidata truncates big responses mid-stream (HTTP 200).
-    `wd.sparql` retries on parse errors; split huge queries (artists are queried per occupation).
+    `wd.sparql` retries on parse errors; split huge queries into smaller batches.
 20. **Wrong studio films** (Pixar list full of unrelated films) → wrong QIDs and first-match
     assignment. Verify every QID on wikidata.org and order studios specific → general.
 21. **Variety slider did nothing audible** → a cooldown capped at 12 plays is invisible among
@@ -87,3 +87,12 @@
     upload matched as well as the music video, whose title spelled the song "KICKBACK". Song names
     are now also compared without spaces, live versions get −7, the artist's own upload +3. Wrong
     picks in existing libraries: track page → *Wrong video?*.
+35. **Harry Potter games imported the film score** → game and film share the exact name and most
+    playlists don't say which → name-clash scoring wants game evidence (see youtube-import.md).
+36. **"Play soundtrack" played in random order** → tracks had no playlist position, and IndexedDB
+    returns them sorted by video id. `pos` is stored now and backfilled for older libraries.
+37. **Shantae sequels missing from the catalog** → 6–11 Wikipedia editions, below the 12 cut-off
+    → series completion and Steam indie favourites (data-pipeline.md).
+38. **A tiny SPARQL query returned 400 MB** → `SELECT DISTINCT ?series WHERE { VALUES ?game {…}
+    ?game wdt:P179 ?series }` made Wikidata scan every series first. Read such links in the
+    details query instead, and test new query shapes with `curl --max-filesize` before a build.

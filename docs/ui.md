@@ -12,8 +12,8 @@ dark by default with a light theme via `prefers-color-scheme`.
 | Tab | Component | Notes |
 |---|---|---|
 | Listen | `ListenView` + `FiltersPanel` | Player, now-playing (cover, store link), controls incl. volume, up next, recent. Filters sidebar |
-| Library | `LibraryView` | Per-work rows (cover, enable toggle), expandable track editor (rename, tags, like/ban, remove) |
-| Discover | `DiscoverView` + `discover/*` | Domain tabs (*Everything, Games, Anime, Film & TV, Artists*) × modes *For you* (shelves), *Browse all* (grid + facets), *Series & franchises*. Search also lists matching library tracks and MusicBrainz artists |
+| Library | `LibraryView` (see *Library* below) | Per-work rows (cover, enable toggle), expandable track editor (rename, tags, like/ban, remove) |
+| Discover | `DiscoverView` + `discover/*` | Domain tabs (*Everything, Games, Anime, Film & TV*) × modes *For you* (shelves), *Browse all* (grid + facets), *Series & franchises*. Search also lists matching library tracks |
 | Add link | `AddView`, `SongImport`, `SteamImport` | Paste YouTube links (review draft before saving), add a single song, Steam library import, backup/restore |
 
 In Listen, the playing work's title and cover open its `GameDetail` in place (tags inside it
@@ -30,7 +30,7 @@ jump to Discover via a facet intent, `requestDiscover(…, facet)`).
   and Roblox covers are sampled on a 48 px canvas (`analyseBackdrop`): if > 15% is transparent,
   the opaque pixels' brightness picks a light (`logo-on-light`) or dark backdrop, cached in
   localStorage.
-- `GameTile`: cover + title (kind icon on *Everything*; artists get a round photo); hover shows
+- `GameTile`: cover + title (kind icon on *Everything*); hover shows
   **+** (auto-add) or **▶**. Unreleased titles get a *Soon* ribbon and no add button; they're
   hidden unless **Show unreleased** is on.
 - `Shelf`: titled horizontal scroller with arrow buttons.
@@ -119,3 +119,12 @@ from any API call reloads into it. The Backup card shows who's signed in and *Si
 The fill animates between the twice-a-second position updates, but snaps on jumps (a seek, a
 new track): `transition: none` when the position moved more than 1.5 s. A click moves the bar
 immediately instead of waiting for the next update.
+
+## Library
+
+`LibraryView.tsx`: a Titles / Tracks switch, search, and compact selects (kind, only when the
+library spans several; status or labels; sort), a summary line with ▶ Play / ⤮ Shuffle for the
+shown set (and, when filtered, *all in rotation* / *pause all*). Title rows: cover, name, kind ·
+year · genres, track and play counts, an in-rotation switch, *Edit* (the inline editor for name,
+year, genres and quick track edits). Clicking a row opens the title page. View, kind and sorts are
+remembered per browser (`medley:library`).

@@ -1,10 +1,11 @@
 // Naming note: "game" is historical. A CatalogGame / Game is any *work* whose music we play:
-// a video game, film, TV series, anime, or a music artist. `kind` says which (absent = game).
+// a video game, film, TV series or anime. `kind` says which (absent = game). (An "artist" kind
+// existed until Oct 2026; such library entries still display, as plain titles.)
 
-export type WorkKind = 'game' | 'film' | 'series' | 'anime' | 'artist';
+export type WorkKind = 'game' | 'film' | 'series' | 'anime';
 
 export interface CatalogGame {
-  id: string; // Wikidata QID (games, films, series, artists), "al:<AniList id>" (anime), or "u:<slug>" (personal/custom)
+  id: string; // Wikidata QID (games, films, series), "al:<AniList id>" (anime), or "u:<slug>" (personal/custom)
   kind?: WorkKind;
   title: string;
   altTitles?: string[]; // e.g. an anime's romaji title; used for search and YouTube matching
@@ -12,7 +13,7 @@ export interface CatalogGame {
   date?: string; // first release YYYY-MM-DD when known (day precision); drives "unreleased"
   genres: string[]; // broad buckets
   series: string | null;
-  composers: string[]; // score composers (games/screen); for artists: unused
+  composers: string[]; // score composers (games, film & TV)
   pop: number; // popularity signal: Wikipedia language editions, or AniList popularity / 1000
   steam?: number; // Steam app id
   sources?: string[]; // fixed YouTube links (own games); skips the YouTube search
@@ -24,10 +25,6 @@ export interface CatalogGame {
   roblox?: { universeId: number; placeId: number };
   /** Anime: opening/ending/insert songs (AnimeThemes). */
   themes?: AnimeTheme[];
-  /** Artists: where they're from and when they started. */
-  artist?: { country?: string; since?: number; type?: 'person' | 'group' };
-  /** Artists: their official YouTube channel id (helps recognise their uploads). */
-  ytChannel?: string;
   /** Credit for a freely licensed cover photo (Wikimedia Commons): shown on the detail page. */
   coverCredit?: { author?: string; license?: string; licenseUrl?: string; source: string };
 }
@@ -82,6 +79,8 @@ export interface Track {
   artist?: string; // performer, when known (songs, OPs/EDs, artist tracks)
   role?: TrackRole;
   seq?: number | null; // OP/ED number
+  /** Position in its source playlist (album order); slices of one video use `start` instead. */
+  pos?: number;
   /** Has singing. Undefined = unknown (treated as instrumental for game tracks, see isVocal). */
   vocal?: boolean;
   start?: number;
@@ -99,13 +98,15 @@ export interface Track {
 
 export interface Source {
   id: string; // playlist or video id
-  /** search = tracks found one video at a time (anime OP/EDs, an artist's songs) */
+  /** search = tracks found one video at a time (anime OP/EDs) */
   kind: 'playlist' | 'video' | 'search';
   title: string;
   channel: string;
   gameIds: string[];
   importedAt: number;
   syncedAt?: number; // last time the playlist was re-checked for added/removed/renamed videos
+  /** Which version of the title this source is, when a title has several ("PC", "GBA"). */
+  label?: string;
 }
 
 export interface Play {

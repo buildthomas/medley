@@ -13,13 +13,16 @@ games come from `my-games.json` in the config dir. No API keys anywhere.
 | `catalog-builder.mjs` (+ `enrich.mjs`, `wiki-covers.mjs`) | `catalog.json`, game collections | Wikidata, SteamSpy, Wikipedia, Steam CDN, Roblox | ~10 min (+30 min first time for Steam keywords) |
 | `screen-builder.mjs` | `screen.json` (films + series), groups `studios`, `films`, `series` | Wikidata, Wikipedia posters | ~15 min |
 | `anime-builder.mjs` | `anime.json`, group `anime` | AniList GraphQL (top 1,200 by popularity), AnimeThemes (songs, batched 50 AniList ids) | ~4 min |
-| `artist-builder.mjs` | `artists.json`, group `artists` | Wikidata (per occupation), Commons/Wikipedia images | ~3 min |
 
 `scripts/wd.mjs` holds the shared Wikidata helpers: `sparql` (retries, including on truncated
 JSON), `label` (en → mul), `datePart` (respects date precision), `commonsThumb`, `inBatches`.
 
 ### Games (catalog-builder.mjs → buildCatalog)
 
+0. **Which games:** base = ≥ 12 Wikipedia editions, plus Nintendo first-party, the biggest per year,
+   every indie game with ≥ 1,500 positive Steam reviews (SteamSpy), and **series completion**:
+   every other game of a series that has a game in the catalog, down to 3 editions (the Shantae
+   sequels have 6–11). English Wikidata aliases become `altTitles` ("FF7R").
 1. **What counts as a game:** `P31` in `GAME_CLASSES`: video game, *paired versions of a video
    game* (Fire Emblem Fates, Pokémon pairs), video game remake/remaster, expansion-like
    standalone releases, and more. Cancelled games (Q61475894) are excluded. Base catalog = ≥ 12 sitelinks.
@@ -47,20 +50,11 @@ song with sequence number and artists (→ `themes`). Each AniList *season* is i
 with its own songs (AoT S1 has 4 themes; S2 its own). Franchise = shared title stem.
 Groups: most popular, films, Ghibli, per year 2010 → now, classics.
 
-### Artists (artist-builder.mjs)
-
-Humans with a musical occupation (singer, rapper, singer-songwriter, musician, DJ, producer,
-queried separately so the result isn't truncated) with ≥ 45 sitelinks, and musical groups with
-≥ 36. Must have genres plus a Spotify id, record label or YouTube channel (filters out actors
-who once sang). Genres bucket into `ARTIST_GENRES` (Pop, Hip hop, K-pop, Rock, R&B & soul,
-Electronic, Latin, Indie & alternative, J-pop, Country, …). Live search beyond the prewarmed
-list: `GET /api/artists/search` → MusicBrainz (server/artists.ts, 1 req/s).
-
 ## Where the output goes
 
 | Run by | Writes | Committed? |
 |---|---|---|
-| `npm run catalog` (`scripts/build-catalog.mjs`, `--only games,screen,anime,artists`) | `src/data/*.json` | Yes: the out-of-the-box catalogs |
+| `npm run catalog` (`scripts/build-catalog.mjs`, `--only games,screen,anime`) | `src/data/*.json` | Yes: the out-of-the-box catalogs |
 | Weekly refresh (`server/api.ts` → `buildAll`) | `<data dir>/*.json` (only the domains that succeeded) + `my-games.json` covers | No (outside the repo) |
 
 The client (`src/lib/catalog.ts`) loads the bundled files and asks the server

@@ -1,7 +1,7 @@
 # Medley
 
 Your own music radio for the things you love: **game soundtracks, anime openings and endings,
-film & TV scores and songs, and your favourite artists**, played with your own shuffle
+film & TV scores and songs**, played with your own shuffle
 algorithm instead of YouTube's recommendations. Audio plays through YouTube's official embedded
 player. Everything else is local: what's in rotation, how tracks are picked, and what you've
 liked or skipped.
@@ -18,22 +18,18 @@ serves a production version on the same port. (It used to be :5173. While `npm r
 the old address redirects here and hands over a library saved there, once, automatically.) The app needs its small
 server to read YouTube metadata, so it is not a static site (see *Your data and hosting*).
 
-## Four kinds of music
+## Three kinds of music
 
 | Domain | Catalog | What gets imported |
 |---|---|---|
 | 🎮 Games | ~4,400 games from Wikidata + SteamSpy | The soundtrack playlist (split by chapters if it's one long video) |
 | 🌸 Anime | Top 1,200 anime from [AniList](https://anilist.co), songs from [AnimeThemes](https://animethemes.moe) | Every OP/ED/insert song by name and artist, plus the OST |
 | 🎬 Film & TV | ~3,900 films and series from Wikidata: Disney, Pixar, DreamWorks, Sony, Illumination, musicals, superhero, popular series | The score album, plus a songs album for musicals and song-heavy films |
-| 🎤 Artists | ~1,600 popular artists from Wikidata, plus live search on [MusicBrainz](https://musicbrainz.org) | Their ~30 best-known songs (official uploads only) |
 
 Tracks know whether they're **vocal** (sing-along) or instrumental, their **role** (opening,
 ending, insert song, score, song), the performing **artist**, and their **length**. So in Listen
 you can filter to e.g. *Anime → Opening only*, or *Film & TV → Vocal only* for a Disney
 sing-along.
-
-**Add a song** (under Add link) adds one song from a YouTube link or a search, filed under its
-artist.
 
 **Just the openings:** the *Adding anime* setting (on the Anime tab, an anime's page, and the
 *Add anime openings* card) picks what an anime import brings in: *Everything*, *Songs only*,
@@ -51,13 +47,12 @@ widen an import later.
 | Game collections (Nintendo per console, top per year, indie hits), keywords | Wikidata + [SteamSpy](https://steamspy.com) | No |
 | Films & series: studio, composers, genres, network, posters | Wikidata + Wikipedia | No |
 | Anime: titles (English/romaji/native), studio, format, tags, OP/ED/insert songs with artists | AniList GraphQL + AnimeThemes API | No |
-| Artists: genres, country, active since, YouTube channel, Spotify; live search | Wikidata, Wikimedia Commons, MusicBrainz | No |
 | Covers | Steam art, Wikipedia infobox images, AniList, Commons, Roblox icons | No |
 | Playlists, video titles, durations, tracklists | YouTube pages, read by the local server (`server/youtube.ts`) | No |
 | Your Steam library | Paste of your Steam games page | No (optional Steam Web API key) |
 | Playback | YouTube IFrame Player API | No |
 
-Rebuild the bundled catalogs with `npm run catalog` (all domains; `--only anime,artists` for a
+Rebuild the bundled catalogs with `npm run catalog` (all domains; `--only games,anime` for a
 subset). Expect ~30–40 minutes for everything, mostly Wikidata/Wikipedia pacing.
 
 ## Weekly auto-update
@@ -88,18 +83,22 @@ The logo opens **Home** (what Medley is; on a hosted, invite-only Medley also th
 everything else hidden until you're in). Tabs: **Discover** (where you land), **Listen**,
 **Library**, **Add link**.
 
-- **Discover:** cover-art shelves per domain (*Everything, Games, Anime, Film & TV, Artists*),
+- **Discover:** cover-art shelves per domain (*Everything, Games, Anime, Film & TV*),
   a filterable *Browse all* grid, and *Series & franchises*. Search covers the catalogs, your
-  library's tracks (with *Play all*), and MusicBrainz artists. **+** adds a title; the title page
+  library's tracks (with *Play all*). **+** adds a title; the title page
   has **▶ Play soundtrack** (in order), **⤮ Shuffle**, **Remove**, tags, store links, the
   openings & endings list for anime, per-track play buttons, and where the cover image comes
-  from (with the photographer and license for Wikimedia photos).
+  from (with the photographer and license for Wikimedia photos). Games whose platforms had different
+  music show each **version** separately (PC, GBA, GameCube…); *Add a version* finds another
+  platform's soundtrack. Tracks play in album order.
 - **Listen:** collapsible filter sections: Mix (Variety, Familiarity), Music from, Length,
   Voice, Song type, Track types, Genres, Series, Platforms, Keywords, Era, Titles. Chips have
   three states: click once for "only these", twice for "never these". Jingles (< 30 s) are
   excluded by default. Click the playing title or its cover to open its page. **⧉** pops the
   player out into a small always-on-top window (Chrome and Edge).
-- **Library:** rename tracks, fix tags, like/ban tracks, remove titles.
+- **Library:** two views, *Titles* and *Tracks*, filtered by kind, status and labels (OP/ED,
+  sung, liked…), sortable, with ▶ Play / ⤮ Shuffle for whatever is shown and an in-rotation switch
+  per title. Click a title to open its page; *Edit* for its name, year and genres.
 - **Add link:** paste YouTube playlists/videos, add a single song, import your Steam library,
   back up or restore, and see whether the browser keeps your library permanently.
 

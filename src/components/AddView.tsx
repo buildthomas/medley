@@ -6,7 +6,6 @@ import { commitDraft, draftFromLink, type ImportDraft } from '../lib/importer';
 import { TRACK_TYPES } from '../lib/parse';
 import type { CatalogGame } from '../types';
 import { AnimeListImport } from './AnimeListImport';
-import { SongImport } from './SongImport';
 import { SteamImport } from './SteamImport';
 import { formatTime } from './ui';
 import { formatBytes, useStorageStatus } from '../lib/storage';
@@ -180,8 +179,6 @@ export function AddView() {
               </ul>
             )}
           </section>
-
-          <SongImport />
 
           <AnimeListImport />
 

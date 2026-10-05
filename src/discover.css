@@ -650,9 +650,6 @@ button.inline-link {
   background: rgba(15, 15, 18, 0.8);
   color: #fff;
 }
-.tile-artist .cover {
-  border-radius: 50% / 34%;
-}
 .domain-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -998,4 +995,38 @@ button.track-cover {
   .track-body {
     padding: 4px 16px 24px;
   }
+}
+
+/* ---------- versions of a title (GameDetail Soundtrack) ---------- */
+.versions {
+  display: grid;
+  gap: 14px;
+  margin-top: 8px;
+}
+.version-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.version-head h4 {
+  margin: 0;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.version .track-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.add-version {
+  margin-top: 12px;
+}
+.add-version .chip {
+  margin: 2px;
+}
+/* `all: unset` on link buttons would otherwise drop the muted colour. */
+button.link-plain.muted {
+  color: var(--muted);
 }

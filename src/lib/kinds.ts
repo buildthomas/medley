@@ -6,15 +6,16 @@ export const KINDS: { id: WorkKind; label: string; one: string; many: string; ic
   { id: 'anime', label: 'Anime', one: 'anime', many: 'anime', icon: '🌸' },
   { id: 'film', label: 'Films', one: 'film', many: 'films', icon: '🎬' },
   { id: 'series', label: 'TV series', one: 'series', many: 'series', icon: '📺' },
-  { id: 'artist', label: 'Artists', one: 'artist', many: 'artists', icon: '🎤' },
 ];
 
 export const kindOf = (w: { kind?: WorkKind }): WorkKind => w.kind ?? 'game';
-export const kindLabel = (k: WorkKind) => KINDS.find((x) => x.id === k)!;
+// Unknown kinds (artists, from before that domain was removed) read as plain titles.
+const OTHER = { id: 'game' as WorkKind, label: 'Other', one: 'title', many: 'titles', icon: '🎵' };
+export const kindLabel = (k: WorkKind | string) => KINDS.find((x) => x.id === k) ?? OTHER;
 
 /**
  * "12 films", "1 anime", or "30 titles" when the kinds are mixed. Medley spans games, anime,
- * film & TV and artists, so user-facing text never says "games" unless they're all games.
+ * film & TV, so user-facing text never says "games" unless they're all games.
  */
 export function titlesLabel(works: { kind?: WorkKind }[], n = works.length) {
   const kinds = new Set(works.map(kindOf));
@@ -34,8 +35,8 @@ export const ROLES: { id: TrackRole; label: string }[] = [
   { id: 'score', label: 'Score / BGM' },
 ];
 
-/** "by Team Cherry", "♪ Joe Hisaishi", "YOASOBI": the credit line shown under a work's title. */
+/** "♪ Joe Hisaishi": the credit line shown under a work's title. */
 export function creditLine(w: { kind?: WorkKind; composers: string[] }): string {
-  if (kindOf(w) === 'artist' || !w.composers.length) return '';
+  if (!w.composers.length) return '';
   return `♪ ${w.composers.slice(0, 2).join(', ')}`;
 }

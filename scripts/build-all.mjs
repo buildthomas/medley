@@ -1,16 +1,15 @@
-// Builds every catalog: games, films & series, anime, artists, plus the combined collections.
+// Builds every catalog: games, films & series, anime, plus the combined collections.
 // Used by `npm run catalog` (writes src/data/) and the weekly in-app refresh (writes data/).
 //
 // Each domain is built independently; if one source is down, the others still refresh and the
 // failed domain keeps its previous file (the caller only writes what came back).
 
 import { buildAnime } from './anime-builder.mjs';
-import { buildArtists } from './artist-builder.mjs';
 import { buildCatalog } from './catalog-builder.mjs';
 import { buildScreen } from './screen-builder.mjs';
 
-export const DATA_FILES = ['catalog', 'screen', 'anime', 'artists', 'collections'];
-const FILE_OF_DOMAIN = { game: 'catalog', screen: 'screen', anime: 'anime', artist: 'artists' };
+export const DATA_FILES = ['catalog', 'screen', 'anime', 'collections'];
+const FILE_OF_DOMAIN = { game: 'catalog', screen: 'screen', anime: 'anime' };
 
 /**
  * Adds the previous collection groups of every domain that wasn't rebuilt (skipped or failed)
@@ -20,7 +19,8 @@ const FILE_OF_DOMAIN = { game: 'catalog', screen: 'screen', anime: 'anime', arti
  */
 export function keepMissingGroups(files, prev) {
   if (!prev) return files;
-  const kept = prev.groups.filter((g) => !(FILE_OF_DOMAIN[g.domain ?? 'game'] in files));
+  // Groups of domains that no longer exist (the removed artists domain) are dropped.
+  const kept = prev.groups.filter((g) => FILE_OF_DOMAIN[g.domain ?? 'game'] && !(FILE_OF_DOMAIN[g.domain ?? 'game'] in files));
   const order = Object.keys(FILE_OF_DOMAIN);
   const rank = (g) => order.indexOf(g.domain ?? 'game');
   // Stable sort: domains in a fixed order, groups within a domain as built.
@@ -63,11 +63,6 @@ export async function buildAll({ log = console.log, cacheFile, only } = {}) {
   if (anime) {
     out.anime = anime.items;
     groups.push(...anime.groups);
-  }
-  const artists = await step('artists', () => buildArtists({ log }));
-  if (artists) {
-    out.artists = artists.items;
-    groups.push(...artists.groups);
   }
   out.collections = { generatedAt: new Date().toISOString(), groups };
   return out;
