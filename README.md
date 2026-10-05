@@ -22,7 +22,7 @@ server to read YouTube metadata, so it is not a static site (see *Your data and 
 
 | Domain | Catalog | What gets imported |
 |---|---|---|
-| 🎮 Games | ~4,400 games from Wikidata + SteamSpy | The soundtrack playlist (split by chapters if it's one long video) |
+| 🎮 Games | ~9,100 games from Wikidata + SteamSpy | The soundtrack playlist (split by chapters if it's one long video) |
 | 🌸 Anime | Top 1,200 anime from [AniList](https://anilist.co), songs from [AnimeThemes](https://animethemes.moe) | Every OP/ED/insert song by name and artist, plus the OST |
 | 🎬 Film & TV | ~3,900 films and series from Wikidata: Disney, Pixar, DreamWorks, Sony, Illumination, musicals, superhero, popular series | The score album, plus a songs album for musicals and song-heavy films |
 
