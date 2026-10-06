@@ -29,7 +29,7 @@ repo (`scripts/paths.mjs`); the user's library is in the browser and moves via b
 | Refreshed catalogs, caches, headless-import output | `%LOCALAPPDATA%\Medley\data` · `~/Library/Application Support/Medley/data` · `~/.local/share/medley` | `MEDLEY_DATA_DIR` |
 | `my-games.json`, `invites.json`, `medley.env` (hosting settings) | `%APPDATA%\Medley` · `~/Library/Application Support/Medley/config` · `~/.config/medley` | `MEDLEY_CONFIG_DIR` |
 | Your library | The browser's IndexedDB (per browser, per site address) | Backup / Restore |
-| Secrets for dev | `.env.local` in the repo (gitignored): optional `STEAM_API_KEY` | Env vars when hosted |
+| Hosting settings for local testing | `.env.local` in the repo (gitignored) | Env vars when hosted |
 
 The dev server prints both directories on start. Older checkouts' `./data` and
 `./config/my-games.json` are moved there automatically (never overwriting).
@@ -39,12 +39,6 @@ Template for your games: `config/my-games.example.json`.
 
 **Add link → Backup** exports/imports a JSON file containing games, tracks, sources, plays and
 `meta`. The headless importer produces the same format.
-
-## Steam library import
-
-Keyless: open `https://steamcommunity.com/my/games/?tab=all&xml=1` while logged in, paste it (or
-save and choose the file) under **Add link → Import your Steam library**. Page text or a list of
-names also work. Matching: Steam app id → catalog / Wikidata P1733 → name.
 
 ## Troubleshooting
 

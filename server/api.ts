@@ -5,7 +5,6 @@
 //   POST   /api/session { code } · DELETE        sign in / out (hosted, invite-only)
 //   GET    /api/search?type=playlist|video&q=   YouTube search (keyless scraping, server/youtube.ts)
 //   GET    /api/playlist?id=  /api/video?id=    YouTube playlist / video details
-//   GET    /api/steam/owned?profile=            Steam library (needs STEAM_API_KEY)
 //   GET    /api/data?name=                      refreshed catalog file from the data dir
 //   GET    /api/my-games                        personal games (config dir)
 //   GET    /api/refresh                         catalog refresh status
@@ -20,7 +19,6 @@ import { readJson, writeFileAtomic } from '../scripts/fsutil.mjs';
 import { catalogsAreStale, readMyGames, refreshStatus, requestRefresh, runRefresh } from '../scripts/refresh.mjs';
 import type { CatalogGame } from '../src/types.ts';
 import { createAuth } from './auth.ts';
-import { steamOwnedGames } from './steam.ts';
 import { getPlaylist, getVideo, search } from './youtube.ts';
 
 export type Next = (err?: unknown) => void;
@@ -29,7 +27,6 @@ export type Handler = (req: IncomingMessage, res: ServerResponse, next: Next) =>
 export interface ApiOptions {
   dataDir: string;
   configDir: string;
-  steamKey?: string;
   /**
    * Who runs catalog refreshes. 'inline': this process (dev, single-process hosting).
    * 'worker': a separate `npm run worker` / cron job sharing the data dir; this process only
@@ -171,8 +168,6 @@ export function createApi(opts: ApiOptions) {
           return send(200, await cached(`p:${q('id')}`, () => getPlaylist(q('id'))));
         case '/api/video':
           return send(200, await cached(`v:${q('id')}`, () => getVideo(q('id'))));
-        case '/api/steam/owned':
-          return send(200, await steamOwnedGames(q('profile'), opts.steamKey));
         case '/api/data': {
           const name = q('name');
           if (!DATA_FILES.includes(name)) throw new Error('Unknown data file');

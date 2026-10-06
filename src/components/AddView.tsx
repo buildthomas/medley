@@ -6,7 +6,6 @@ import { commitDraft, draftFromLink, type ImportDraft } from '../lib/importer';
 import { TRACK_TYPES } from '../lib/parse';
 import type { CatalogGame } from '../types';
 import { AnimeListImport } from './AnimeListImport';
-import { SteamImport } from './SteamImport';
 import { formatTime } from './ui';
 import { formatBytes, useStorageStatus } from '../lib/storage';
 import { signOut, useAuth } from '../lib/auth';
@@ -181,8 +180,6 @@ export function AddView() {
           </section>
 
           <AnimeListImport />
-
-          <SteamImport />
 
           <section className="card">
             <h2>Backup</h2>

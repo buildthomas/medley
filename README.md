@@ -49,7 +49,6 @@ widen an import later.
 | Anime: titles (English/romaji/native), studio, format, tags, OP/ED/insert songs with artists | AniList GraphQL + AnimeThemes API | No |
 | Covers | Steam art, Wikipedia infobox images, AniList, Commons, Roblox icons | No |
 | Playlists, video titles, durations, tracklists | YouTube pages, read by the local server (`server/youtube.ts`) | No |
-| Your Steam library | Paste of your Steam games page | No (optional Steam Web API key) |
 | Playback | YouTube IFrame Player API | No |
 
 Rebuild the bundled catalogs with `npm run catalog` (all domains; `--only games,anime` for a
@@ -99,7 +98,7 @@ everything else hidden until you're in). Tabs: **Discover** (where you land), **
 - **Library:** two views, *Titles* and *Tracks*, filtered by kind, status and labels (OP/ED,
   sung, liked…), sortable, with ▶ Play / ⤮ Shuffle for whatever is shown and an in-rotation switch
   per title. Click a title to open its page; *Edit* for its name, year and genres.
-- **Add link:** paste YouTube playlists/videos, add a single song, import your Steam library,
+- **Add link:** paste YouTube playlists/videos, search YouTube playlists, import an anime list,
   back up or restore, and see whether the browser keeps your library permanently.
 
 Medley can be installed as an app (Chrome/Edge: the install icon in the address bar). That

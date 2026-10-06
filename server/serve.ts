@@ -13,7 +13,6 @@
 //   MEDLEY_SECRET           signs session cookies (default: a random secret kept in the data dir)
 //   MEDLEY_TRUST_PROXY      1 behind a reverse proxy (X-Forwarded-For/-Proto)
 //   MEDLEY_RATE_LIMIT       YouTube/MusicBrainz API calls per minute per IP (default 600; 0 = off)
-//   STEAM_API_KEY           optional, for loading a Steam library by profile URL
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -36,7 +35,6 @@ const role = env.MEDLEY_ROLE === 'web' ? 'web' : 'all';
 const api = createApi({
   dataDir,
   configDir,
-  steamKey: env.STEAM_API_KEY,
   refresh: role === 'all' ? 'inline' : 'worker',
   auth: { password: env.MEDLEY_PASSWORD || undefined, secret: env.MEDLEY_SECRET || undefined },
   trustProxy: env.MEDLEY_TRUST_PROXY === '1',

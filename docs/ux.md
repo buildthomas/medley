@@ -26,7 +26,7 @@ User-facing words: "title(s)" or the kind's own word (`kindLabel`, `titlesLabel`
 | **Track page** (overlay) | Everything about one track: labels (kind & number, voice, types: editable), length, play stats, source, play / like / never / rename, *Wrong video?* (swap the upload), links to its title and credited artists | Any track name (title page, up next, recently played, program, search results, now playing, Library ⓘ) |
 | **Listen** (tab) | Now playing, up next, program, recently played, filters | Tab; ⤢ on the docked player |
 | **Library** (tab) | Everything you own, in bulk: Titles and Tracks views, filters, play the filtered set, rotation switches, edit details | Tab |
-| **Add link** (tab) | Bring music in: YouTube links, a single song, anime openings lists, Steam; backup, storage, sign-out | Tab |
+| **Add link** (tab) | Bring music in: YouTube links and playlist search, anime lists; backup, storage, sign-out | Tab |
 
 ## Links (the rule)
 

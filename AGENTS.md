@@ -4,7 +4,7 @@
 through YouTube's embedded player, with its own shuffle algorithm. Three domains, each with its
 own catalog and importer: **games** (~9,100, Wikidata + Steam), **anime** (1,200, AniList +
 AnimeThemes OP/ED data) and **film & TV** (~3,900, Wikidata). (An artists domain existed
-until Oct 2026; it's in git history if it's ever wanted back.) Internally a "game" (`Game`, `CatalogGame`) means any *work*, whatever its
+until Oct 2026, and a Steam library import until then too; both are in git history if they're ever wanted back.) Internally a "game" (`Game`, `CatalogGame`) means any *work*, whatever its
 `kind`.
 
 Storage is named `medley` (IndexedDB) and `medley:*` (localStorage). Libraries from before the
@@ -20,7 +20,7 @@ one-line summary. Read only what your task needs.
 
 ```bash
 npm install
-npm run dev          # http://localhost:32123 (Vite + a small API middleware for YouTube/Steam)
+npm run dev          # http://localhost:32123 (Vite + a small API middleware for YouTube)
 npm run typecheck    # tsc --noEmit: the only automated check; run it after every change
 ```
 
@@ -34,7 +34,7 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
 | `src/lib/` | Logic without UI: shuffle (`picker.ts`), importing (`importer.ts`, `importers/anime.ts`, `parse.ts`, `platforms.ts`), track order (`trackOrder.ts`), catalog (`catalog.ts`), search, background jobs (`bulk.ts`, `updater.ts`, `sync.ts`) |
 | `src/components/` | Views; `discover/` holds the cover-art browsing UI |
 | `src/data/` | **Generated, committed** public catalogs (`catalog.json` games, `screen.json`, `anime.json`, `collections.json`). Rebuilt by `npm run catalog` |
-| `server/` | `/api/*` (`api.ts`: YouTube scraping + disk cache, Steam, refresh status, personal games; `auth.ts`: invite-only sign-in), mounted by `plugin.ts` in dev and `serve.ts` in production; `worker.ts` background refreshes |
+| `server/` | `/api/*` (`api.ts`: YouTube scraping + disk cache, refresh status, personal games; `auth.ts`: invite-only sign-in), mounted by `plugin.ts` in dev and `serve.ts` in production; `worker.ts` background refreshes |
 | `scripts/` | `refresh.mjs` (the catalog refresh job), `paths.mjs` (data/config dirs), one builder per domain (`catalog-`, `screen-`, `anime-builder.mjs`, combined by `build-all.mjs`), shared Wikidata helpers (`wd.mjs`), enrichment, headless bulk importer |
 | `config/` | Only templates (`my-games.example.json`, `invites.example.json`). Real personal config lives **outside the repo** (`scripts/paths.mjs`) |
 | `Dockerfile`, `docker-compose.yml` | Production image; web + worker sharing a data volume. See [docs/hosting.md](docs/hosting.md) |
@@ -47,8 +47,8 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
    `MEDLEY_DATA_DIR` / `MEDLEY_CONFIG_DIR`). `config/*` (except examples), `/data/`, `.env*`,
    backups and `steam-library.*` stay gitignored as a safety net. The user's library lives in
    their browser's IndexedDB, never in the repo.
-2. **No API keys are required for anything core.** Keep it that way. Optional keys go in `.env.local`
-   (see `.env.example`) and features must degrade gracefully without them.
+2. **No API keys are required for anything core.** Keep it that way. If an optional key is ever added, it goes in `.env.local`
+   (see `.env.example`) and the feature must degrade gracefully without it.
 3. **The YouTube reader is scraping** (`server/youtube.ts`). It parses YouTube's embedded JSON
    structurally. If imports break, look there first: [docs/youtube-import.md](docs/youtube-import.md).
 4. **Editing `server/*` or any `scripts/*.mjs` that the server imports (the builders, `wd.mjs`,

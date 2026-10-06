@@ -32,8 +32,7 @@ hidden (no `requestAnimationFrame`); test the pop-out in Chrome/Edge.
 
 - **Words:** Medley spans games, anime and film & TV. User-facing text says "title(s)",
   or the kind's own word via `kindLabel(kind).one` / `titlesLabel(works)` (`src/lib/kinds.ts`:
-  "12 films", "3 anime", "30 titles"). Never "game" outside game-only places (game collections,
-  Steam import). In code, `Game`/`CatalogGame`/`gameId` mean any work; that's historical, keep it.
+  "12 films", "3 anime", "30 titles"). Never "game" outside game-only places (game collections). In code, `Game`/`CatalogGame`/`gameId` mean any work; that's historical, keep it.
 - **Track ids** are `videoId`, `videoId@start` (a slice of a long video), or `…~<gameId>` when the
   same video belongs to a second title (an artist's song that's also an anime opening). Nothing
   may parse ids; use the track's fields.
