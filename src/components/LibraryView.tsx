@@ -9,6 +9,7 @@ import { isVocal } from '../lib/picker';
 import { albumOrder } from '../lib/trackOrder';
 import { buildIndex, search } from '../lib/search';
 import { Cover } from './discover/Cover';
+import { PlayIcon } from './icons';
 import { TrackRow } from './TrackRow';
 import type { Session } from '../useSession';
 import type { Game, Track, WorkKind } from '../types';
@@ -190,6 +191,13 @@ export function LibraryView({ session }: { session: Session }) {
     setFixing(`Switched ${fixed} of ${titlesLabel(list)} to English track names; the rest only exist in their original language.`);
   }
 
+  /** ▶ on a title: its whole soundtrack in album order, like the title page's Play. */
+  async function playSoundtrack(g: Game, list: Track[]) {
+    const sources = await db.sources.filter((s) => s.gameIds.includes(g.id)).toArray();
+    const ids = albumOrder(list.filter((t) => !t.banned && !t.unavailable), sources).map((t) => t.id);
+    await session.playProgram(g.title, ids);
+  }
+
   if (!games.length)
     return session.loaded ? <Empty>Nothing here yet. Add titles from Discover, or paste a link under Add link.</Empty> : null;
 
@@ -332,6 +340,15 @@ export function LibraryView({ session }: { session: Session }) {
             return (
               <li key={g.id} className={`lib-title-item ${g.enabled ? '' : 'paused'} ${editing ? 'editing' : ''}`}>
                 <div className="lib-title-row">
+                  <button
+                    className="icon play-btn"
+                    disabled={!list.some((t) => !t.banned && !t.unavailable)}
+                    onClick={() => playSoundtrack(g, list)}
+                    title={`Play ${g.title}, in order`}
+                    aria-label={`Play ${g.title}`}
+                  >
+                    <PlayIcon size={13} />
+                  </button>
                   <button className="lib-open" onClick={() => openTitle(g.id)} title={`Open this ${kind.one}`}>
                     <Cover game={{ title: g.title, year: g.year, covers: cat?.byId.get(g.id)?.covers }} className="lib-cover" />
                     <span className="lib-name">

@@ -12,7 +12,7 @@ dark by default with a light theme via `prefers-color-scheme`.
 | Tab | Component | Notes |
 |---|---|---|
 | Listen | `ListenView` + `FiltersPanel` | Player, now-playing (cover, store link), controls incl. volume, up next, recent. Filters sidebar |
-| Library | `LibraryView` (see *Library* below) | Per-work rows (cover, enable toggle), expandable track editor (rename, tags, like/ban, remove) |
+| Library | `LibraryView` (see *Library* below) | Per-work rows (▶ plays its soundtrack in album order as a program, cover, enable toggle), expandable track editor (rename, tags, like/ban, remove) |
 | Discover | `DiscoverView` + `discover/*` | Domain tabs (*Everything, Games, Anime, Film & TV*) × modes *For you* (shelves), *Browse all* (grid + facets), *Series & franchises*. Search also lists matching library tracks |
 | Add link | `AddView`, `AnimeListImport` | Paste YouTube links (review draft before saving), search YouTube playlists, import an anime list, backup/restore |
 
