@@ -100,8 +100,10 @@ status and usage, with a button to ask again.
 
 ## Home and sign-in
 
-`Home.tsx` is the landing page: pitch, the four domains, features. Locally it offers *Discover
-music* / *Start listening*. On a hosted Medley where `/api/session` says sign-in is required and
+`Home.tsx` is the landing page, deliberately sparse: one headline, one line, *Start listening* /
+*Discover music*, and a slowly drifting shelf of covers (`CoverReel`: the best-known titles per
+domain, one per series, posters only; still under `prefers-reduced-motion`). The idle docked player
+is hidden there (`dock-hidden`) until something plays. On a hosted Medley where `/api/session` says sign-in is required and
 nobody is signed in, `main.tsx` renders only `Home` (logo, no tabs) with the sign-in form; a 401
 from any API call reloads into it. The Backup card shows who's signed in and *Sign out*.
 
