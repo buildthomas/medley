@@ -68,6 +68,8 @@ work through the Media Session API; see [shuffle.md](shuffle.md).
 
 - `TrackDetail.tsx`: the track page (labels editable: kind/number, voice, types; facts; source;
   play/like/never/rename; links to its title and credited artists that are titles).
+- `PlayButton` (`ui.tsx`): the ▶ at the start of every row (tracks, Library titles, theme lists,
+  the track editor). A round 32px target; use it rather than a bare ▶ button.
 - `TrackRow.tsx`: every list of tracks (title pages, up next, program, recently played, search
   results): ▶ plays, the name opens the track, labels inline (`TrackLabels`), optional link to
   the title. The Library's editor keeps its table and adds ⓘ → track page and *Open page* per row.

@@ -9,11 +9,10 @@ import { isVocal } from '../lib/picker';
 import { albumOrder } from '../lib/trackOrder';
 import { buildIndex, search } from '../lib/search';
 import { Cover } from './discover/Cover';
-import { PlayIcon } from './icons';
 import { TrackRow } from './TrackRow';
 import type { Session } from '../useSession';
 import type { Game, Track, WorkKind } from '../types';
-import { Empty, formatTime } from './ui';
+import { Empty, formatTime, PlayButton } from './ui';
 
 // The Library: everything you own, in bulk (docs/ux.md). Two views over the same library:
 // Titles (rotation on/off, fix names and labels, remove) and Tracks (every track, filterable by
@@ -340,15 +339,11 @@ export function LibraryView({ session }: { session: Session }) {
             return (
               <li key={g.id} className={`lib-title-item ${g.enabled ? '' : 'paused'} ${editing ? 'editing' : ''}`}>
                 <div className="lib-title-row">
-                  <button
-                    className="icon play-btn"
+                  <PlayButton
                     disabled={!list.some((t) => !t.banned && !t.unavailable)}
                     onClick={() => playSoundtrack(g, list)}
-                    title={`Play ${g.title}, in order`}
-                    aria-label={`Play ${g.title}`}
-                  >
-                    <PlayIcon size={13} />
-                  </button>
+                    label={`Play ${g.title}, in order`}
+                  />
                   <button className="lib-open" onClick={() => openTitle(g.id)} title={`Open this ${kind.one}`}>
                     <Cover game={{ title: g.title, year: g.year, covers: cat?.byId.get(g.id)?.covers }} className="lib-cover" />
                     <span className="lib-name">
@@ -470,9 +465,7 @@ function GameEditor({
           {sorted.map((t) => (
             <tr key={t.id} className={t.banned || t.unavailable ? 'excluded' : ''}>
               <td>
-                <button className="icon" title="Play now" disabled={t.unavailable} onClick={() => session.playNow(t.id)}>
-                  ▶
-                </button>
+                <PlayButton disabled={t.unavailable} onClick={() => session.playNow(t.id)} />
                 <button className="icon" title="Track details" onClick={() => openTrack(t.id)}>
                   ⓘ
                 </button>

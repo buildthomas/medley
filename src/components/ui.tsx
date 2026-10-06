@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { ChipState } from '../types';
+import { PlayIcon } from './icons';
 
 export function formatTime(s: number | null | undefined): string {
   if (s == null || !isFinite(s)) return '–:––';
@@ -138,4 +139,13 @@ export function Slider({
 
 export function Empty({ children }: { children: ReactNode }) {
   return <div className="empty">{children}</div>;
+}
+
+/** ▶ at the start of a row (a track, a title): the same look and hit area everywhere. */
+export function PlayButton({ onClick, label = 'Play now', disabled }: { onClick(): void; label?: string; disabled?: boolean }) {
+  return (
+    <button className="icon play-btn" disabled={disabled} onClick={onClick} title={label} aria-label={label}>
+      <PlayIcon size={13} />
+    </button>
+  );
 }

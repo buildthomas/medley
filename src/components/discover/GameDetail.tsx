@@ -12,6 +12,7 @@ import type { AnimeTheme, CatalogGame, GameTags, Source, Track } from '../../typ
 import { AnimeScopePicker } from '../AnimeScopePicker';
 import type { Session } from '../../useSession';
 import { Cover } from './Cover';
+import { PlayButton } from '../ui';
 import { TrackRow } from '../TrackRow';
 
 export type FacetKind = keyof GameTags | 'keyword' | 'franchise' | 'composer';
@@ -300,9 +301,7 @@ export function GameDetail({
                           {th.artists.length > 0 && <span className="muted"> · {th.artists.join(', ')}</span>}
                         </span>
                         {track ? (
-                          <button className="icon" onClick={() => session.playNow(track.id)} title="Play">
-                            ▶
-                          </button>
+                          <PlayButton onClick={() => session.playNow(track.id)} />
                         ) : (
                           <button
                             className="icon"

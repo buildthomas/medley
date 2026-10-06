@@ -7,7 +7,7 @@ import { openTitle, openTrack } from '../lib/nav';
 import { TRACK_TYPES } from '../lib/parse';
 import { isVocal, lengthOf, LENGTHS } from '../lib/picker';
 import type { Game, Track } from '../types';
-import { PlayIcon } from './icons';
+import { PlayButton } from './ui';
 import { formatTime } from './ui';
 
 const TYPE_LABEL = new Map(TRACK_TYPES.map((t) => [t.id, t.label]));
@@ -62,9 +62,7 @@ export function TrackRow({
   return (
     <li className={`track-row ${excluded ? 'excluded' : ''}`}>
       {onPlay && (
-        <button className="icon play-btn" disabled={track.unavailable} onClick={onPlay} title={playTitle} aria-label={playTitle}>
-          <PlayIcon size={13} />
-        </button>
+        <PlayButton disabled={track.unavailable} onClick={onPlay} label={playTitle} />
       )}
       <span className="track-main">
         <button className="link-plain track-name" onClick={() => openTrack(track.id)} title="Track details">

@@ -138,13 +138,14 @@ button.icon.liked {
 button.icon.play-btn {
   display: inline-grid;
   place-items: center;
-  min-width: 32px;
-  min-height: 32px;
+  width: 32px;
+  height: 32px;
+  flex: none;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 50%;
 }
 button.icon.play-btn:hover:not(:disabled) {
-  background: var(--bg-sunken);
+  background: color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 input:not([type='checkbox']):not([type='range']),
