@@ -100,3 +100,7 @@
     Wikidata, marked *deprecated*, and `p:P577/psv:P577` reads every rank, so "earliest date"
     picked the abandoned target. The details queries skip deprecated dates (`wdt:` already reads
     only best-rank ones). The same bug dated delayed films by their first planned release (No Time to Die as 2019).
+40. **RuneScape imported fan "music videos"** (machinima with unrelated songs) → a bare "music"
+    counted as much as "OST", nothing penalised fan videos, and a 9+ score skipped the second
+    search. Now "music videos", GMV/MMV, fan-made, tribute, montage, mashup and machinima are
+    `bad` for games, and a bare "music" earns +1.5 instead of +3.

@@ -363,7 +363,8 @@ const VOCAB: Record<'game' | 'screen' | 'anime', Vocab> = {
   game: {
     queries: (g) => [`${g.title} OST`, `${g.title} original soundtrack`],
     good: /\bost\b|soundtrack|sound track|\bbgm\b|original score|\bmusic\b/i,
-    bad: new RegExp(`${COMMON_BAD.source}|movie|motion picture|\\bfilm\\b|\\banime\\b|\\bseries\\b|playthrough|walkthrough|longplay|gameplay|let'?s play|orchestra(l)? (cover|arrangement)`, 'i'),
+    // Fan-made videos set to music ("Runescape Music Videos": machinima with random songs).
+    bad: new RegExp(`${COMMON_BAD.source}|movie|motion picture|\\bfilm\\b|\\banime\\b|\\bseries\\b|playthrough|walkthrough|longplay|gameplay|let'?s play|orchestra(l)? (cover|arrangement)|music videos?|\\b[gm]?mv\\b|fan ?made|tribute|montage|mashup|machinima`, 'i'),
   },
   screen: {
     queries: (w) =>
@@ -384,6 +385,8 @@ const vocabFor = (w: CatalogGame) => {
   const k = kindOf(w);
   return k === 'film' || k === 'series' ? VOCAB.screen : k === 'anime' ? VOCAB.anime : VOCAB.game;
 };
+
+const STRONG_GOOD = /\bost\b|soundtrack|sound track|\bbgm\b|original score|\bscore\b|サウンドトラック/i;
 
 const OFFICIAL = /- topic$|official|music channel|records|sound team|\bvevo\b|disney|pixar|netflix|hbo|sony|warner|universal|lakeshore|milan|walt disney records/i;
 
@@ -466,7 +469,8 @@ export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHi
       const years = [...hit.title.matchAll(/\b(19[5-9]\d|20[0-4]\d)\b/g)].map((m) => Number(m[1]));
       if (game.year && years.length) score += years.some((y) => Math.abs(y - game.year!) <= 1) ? 1 : -6;
       if (clash) score += clashScore(game, clash, `${hit.title} ${hit.channel}`);
-      if (vocab.good.test(hit.title)) score += 3;
+      // "OST" / "soundtrack" say what it is; a bare "music" ("RuneScape Music") is weaker evidence.
+      if (vocab.good.test(hit.title)) score += STRONG_GOOD.test(hit.title) ? 3 : 1.5;
       if (vocab.bad.test(hit.title)) score -= 6;
       if (OFFICIAL.test(hit.channel)) score += 1.5;
       if (hit.title.startsWith('Album - ') || hit.id.startsWith('OLAK5uy_')) score += 1.5;
