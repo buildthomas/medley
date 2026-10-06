@@ -96,3 +96,7 @@
 38. **A tiny SPARQL query returned 400 MB** → `SELECT DISTINCT ?series WHERE { VALUES ?game {…}
     ?game wdt:P179 ?series }` made Wikidata scan every series first. Read such links in the
     details query instead, and test new query shapes with `curl --max-filesize` before a build.
+39. **GTA VI showed as released (2025)** → a delayed work keeps its old release targets on
+    Wikidata, marked *deprecated*, and `p:P577/psv:P577` reads every rank, so "earliest date"
+    picked the abandoned target. The details queries skip deprecated dates (`wdt:` already reads
+    only best-rank ones). The same bug had films dated by festival-era targets (No Time to Die 2019).

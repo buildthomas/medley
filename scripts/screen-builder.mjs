@@ -137,7 +137,12 @@ export async function buildScreen({ log = console.log } = {}) {
       SELECT ?w ?label ?date ?prec ?genre ?composer ?series ?franchise ?studio ?network ?country ?director ?imdb ?wiki ?jpAnimated WHERE {
         VALUES ?w { ${values(batch)} }
         ${label('?w', '?label')}
-        OPTIONAL { ?w p:P577/psv:P577 [ wikibase:timeValue ?date ; wikibase:timePrecision ?prec ] }
+        # Not deprecated: a delayed release keeps its old, deprecated dates (see catalog-builder).
+        OPTIONAL {
+          ?w p:P577 ?rel .
+          ?rel psv:P577 [ wikibase:timeValue ?date ; wikibase:timePrecision ?prec ] ; wikibase:rank ?rank .
+          FILTER(?rank != wikibase:DeprecatedRank)
+        }
         OPTIONAL { ?w wdt:P136 ?g . ${label('?g', '?genre')} }
         OPTIONAL { ?w wdt:P86 ?c . ${label('?c', '?composer')} }
         OPTIONAL { ?w wdt:P179 ?s . ${label('?s', '?series')} }

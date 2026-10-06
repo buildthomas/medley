@@ -214,7 +214,13 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
       SELECT ?game ?label ?date ?prec ?genreLabel ?s ?seriesLabel ?composerLabel ?steam WHERE {
         VALUES ?game { ${batch.map((id) => 'wd:' + id).join(' ')} }
         ${label('?game', '?label')}
-        OPTIONAL { ?game p:P577/psv:P577 [ wikibase:timeValue ?date ; wikibase:timePrecision ?prec ] }
+        # Every release that isn't deprecated: a delayed game keeps its old targets, deprecated
+        # (GTA VI's "2025"), and taking the earliest of those made it look released.
+        OPTIONAL {
+          ?game p:P577 ?rel .
+          ?rel psv:P577 [ wikibase:timeValue ?date ; wikibase:timePrecision ?prec ] ; wikibase:rank ?rank .
+          FILTER(?rank != wikibase:DeprecatedRank)
+        }
         OPTIONAL { ?game wdt:P1733 ?steam }
         OPTIONAL { ?game wdt:P136 ?g . ${label('?g', '?genreLabel')} }
         OPTIONAL { ?game wdt:P179 ?s . ${label('?s', '?seriesLabel')} }
