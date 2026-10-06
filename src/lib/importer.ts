@@ -32,6 +32,8 @@ export interface DraftTrack {
   artist?: string;
   role?: TrackRole;
   seq?: number | null;
+  /** Who uploaded the video (not stored; tells a fan's remix from the soundtrack's own uploads). */
+  uploader?: string;
 }
 
 export interface DraftGroup {
@@ -140,6 +142,7 @@ function makeTrack(
     duration: slice ? (slice.end != null ? slice.end - slice.start : null) : duration,
     types,
     include: true,
+    ...(ctx?.channel ? { uploader: ctx.channel } : {}),
   };
   const kind = ctx?.kind ?? 'game';
   if (kind === 'film' || kind === 'series' || kind === 'anime') {
@@ -158,7 +161,58 @@ function makeTrack(
   return track;
 }
 
+// ---- derivative tracks: fan remixes, covers, slowed/nightcore edits, loops -------------------------
+
+/**
+ * Uploads that aren't the work's own music. Playlists that are fine by title still carry them
+ * ("Helltaker OST": half its tracks are "SayMaxWell - Luminescent [Remix] (NO Copyright)").
+ */
+// Always a fan's edit, whoever uploaded it. ("Unofficial soundtrack" is not one: uploaders call
+// in-game music that never got an album release that, like The Witcher 3's cemetery ambience.
+// "(Extended)" loops are the real music too.)
+const FAN_EDIT = /no copyright|copyright free|fan ?-?made|\bnightcore\b|\bslowed\b|\bsped up\b|\b8d audio\b/i;
+// Often a fan's, but games and their studios publish these too (Riot's Worlds remixes,
+// Fortnite's "Emote Remix" lobby tracks, Cyberpunk's "SAMURAI Cover"): only when unofficial.
+const VARIANT = /\bremix(ed)?\b|\brmx\b|\bcover\b|\blo-?fi\b|\bmashup\b|\bbootleg\b|\b\d+\s*hours?\b/i;
+
+/**
+ * Unticks derivative tracks (pasted links show them unticked in the review; auto-imports skip
+ * them). FAN_EDIT always; VARIANT unless it looks official: an official channel uploaded it,
+ * it says "official", it's by one of the work's composers, or it comes from the same uploader
+ * as the rest of the playlist. Not when the word is in the work's own name, and not when nearly
+ * the whole playlist is like that: then it's a remix album someone chose (Celeste's B-Sides).
+ */
+function skipDerivatives(draft: ImportDraft, composersOf: (g: DraftGroup) => string[]): ImportDraft {
+  const all = draft.groups.flatMap((g) => g.tracks);
+  const variant = (t: DraftTrack) => FAN_EDIT.test(t.rawTitle) || VARIANT.test(t.rawTitle);
+  // Who uploaded the plain tracks; a remix from them is part of the same collection.
+  const uploads = new Map<string, number>();
+  for (const t of all) if (t.uploader && !variant(t)) uploads.set(t.uploader, (uploads.get(t.uploader) ?? 0) + 1);
+  const isDerivative = (t: DraftTrack, g: DraftGroup) => {
+    const raw = t.rawTitle;
+    if (FAN_EDIT.test(g.title) || VARIANT.test(g.title)) return false;
+    if (FAN_EDIT.test(raw)) return true;
+    if (!VARIANT.test(raw)) return false;
+    const official =
+      /\bofficial\b/i.test(raw) ||
+      (!!t.uploader && (OFFICIAL.test(t.uploader) || (uploads.get(t.uploader) ?? 0) >= 2)) ||
+      composersOf(g).some((c) => c.length > 2 && normalize(raw).includes(normalize(c)));
+    return !official;
+  };
+  const flagged = draft.groups.flatMap((g) => g.tracks.filter((t) => isDerivative(t, g)));
+  // A remix album is (nearly) all remixes; half is a soundtrack with fan uploads mixed in.
+  if (!flagged.length || flagged.length >= all.length * 0.75) return draft;
+  const skip = new Set(flagged);
+  return { ...draft, groups: draft.groups.map((g) => ({ ...g, tracks: g.tracks.map((t) => (skip.has(t) ? { ...t, include: false } : t)) })) };
+}
+
 export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): Promise<ImportDraft> {
+  const draft = await buildDraft(link, forceGame);
+  const { byId } = await loadCatalog();
+  return skipDerivatives(draft, (g) => forceGame?.composers ?? (g.catalogId ? (byId.get(g.catalogId)?.composers ?? []) : []));
+}
+
+async function buildDraft(link: ParsedLink, forceGame?: CatalogGame): Promise<ImportDraft> {
   const { matcher } = await loadCatalog();
   // Known performers: none since the artists catalog was removed; Topic channels, "feat." and
   // soundtrack annotations still identify songs.
@@ -227,7 +281,7 @@ export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): 
           key: title,
           title,
           catalogId: catalog?.id ?? null,
-          tracks: p.items.map((i) => makeTrack(i.videoId, i.title, i.duration, names)),
+          tracks: p.items.map((i) => makeTrack(i.videoId, i.title, i.duration, names, undefined, { channel: i.channel })),
         },
       ],
     };
@@ -241,7 +295,7 @@ export async function draftFromLink(link: ParsedLink, forceGame?: CatalogGame): 
       group = { key: g.title, title: g.title, catalogId: g.catalog?.id ?? null, tracks: [] };
       groups.set(g.title, group);
     }
-    group.tracks.push(makeTrack(item.videoId, item.title, item.duration, [g.title, ...(g.catalog?.composers ?? [])]));
+    group.tracks.push(makeTrack(item.videoId, item.title, item.duration, [g.title, ...(g.catalog?.composers ?? [])], undefined, { channel: item.channel }));
   });
   return { source, groups: [...groups.values()].sort((a, b) => b.tracks.length - a.tracks.length) };
 }
@@ -553,6 +607,16 @@ export async function autoAddGame(game: CatalogGame, pick?: PlaylistHit): Promis
 export async function importSoundtrackPlaylist(game: CatalogGame): Promise<AutoAddResult> {
   const candidates = await findCandidates(game);
   const best = await bestPlaylistDraft(game, candidates);
+  // A fan's playlist loses to the composer's own upload when there is one ("Helltaker OST
+  // (Official)" by Mittsies: one video, its tracks as chapters).
+  if (!best || !officialPlaylist(game, best.hit)) {
+    const included = best?.draft.groups[0]?.tracks.filter((t) => t.include).length ?? 0;
+    const official = await officialVideo(game, Math.ceil(included / 2));
+    if (official) {
+      const added = await commitDraft(official.draft);
+      return { added, sourceTitle: official.video.title, sourceId: official.video.id, candidates };
+    }
+  }
   if (best) {
     const k = kindOf(game);
     // A platform-specific soundtrack is labelled as that version ("PC").
@@ -589,6 +653,45 @@ export async function importSoundtrackPlaylist(game: CatalogGame): Promise<AutoA
     return { added, sourceTitle: v.title, sourceId: v.id, candidates };
   }
   throw Object.assign(new Error('No good soundtrack source found'), { candidates });
+}
+
+const isComposerChannel = (game: CatalogGame, channel: string) =>
+  game.composers.some((c) => c.length > 2 && normalize(channel.replace(/\s*-\s*topic$/i, '')) === normalize(c));
+
+/** A playlist from the publisher, a label, a composer, or a YouTube Music album. */
+function officialPlaylist(game: CatalogGame, hit: PlaylistHit) {
+  return OFFICIAL.test(hit.channel) || isComposerChannel(game, hit.channel) || hit.id.startsWith('OLAK5uy_') || hit.title.startsWith('Album - ');
+}
+
+/**
+ * The work's official soundtrack as one video with a timestamped tracklist: named for the work,
+ * marked official (title, uploader, or "official upload" in the description), at least 8
+ * minutes, and at least `minTracks` chapters (so a short sampler can't replace a full playlist).
+ */
+async function officialVideo(game: CatalogGame, minTracks: number) {
+  if (kindOf(game) === 'anime') return null; // anime songs come from AnimeThemes
+  const names = [game.title, ...(game.altTitles ?? [])].map((n) => ` ${normalize(n)} `).filter((n) => n.trim());
+  const videos = await searchVideos(`${game.title} OST official`);
+  for (const v of videos.slice(0, 6)) {
+    if (!(v.duration && v.duration >= 8 * 60)) continue;
+    // Only the work's own name plus boilerplate, so not a sequel or spin-off ("Tetris Effect",
+    // "The Sims 4", "Doom: The Dark Ages"), then the playlist checks (years, bad words, other
+    // catalog titles) must pass as well.
+    const t = ` ${normalize(v.title)} `;
+    const target = names.find((n) => t.includes(n));
+    if (!target) continue;
+    const rest = (t.slice(0, t.indexOf(target)) + ' ' + t.slice(t.indexOf(target) + target.length)).split(' ').filter((w) => w && !FILLER.has(w));
+    if (rest.some((w) => !(/^(19|20)\d\d$/.test(w) && game.year && Math.abs(Number(w) - game.year) <= 1))) continue;
+    const [ranked] = await rankPlaylistCandidates(game, [{ kind: 'playlist', id: v.id, title: v.title, channel: v.channel, videoCount: 20 }]);
+    if (!ranked || ranked.score < 9) continue;
+    const markedOfficial = /\bofficial\b/i.test(v.title) || OFFICIAL.test(v.channel) || isComposerChannel(game, v.channel);
+    const draft = await draftFromLink({ kind: 'video', id: v.id }, game);
+    const tracks = draft.groups[0]?.tracks ?? [];
+    if (tracks.length < Math.max(3, minTracks) || tracks.some((t) => t.start == null)) continue;
+    if (!markedOfficial && !/official (upload|soundtrack|release)/i.test((await fetchVideo(v.id)).description)) continue;
+    return { draft, video: v };
+  }
+  return null;
 }
 
 /**

@@ -111,3 +111,8 @@
     A leftover number cancels that ("Roblox 3008 OST"), except a "1" or the release year. Any
     ranking change: compare the top pick before/after for ~80 popular works (YouTube answers are
     cached, so it's quick).
+41. **Fan remixes inside a fine-looking playlist** (Helltaker OST: 6 of 12 tracks were "[Remix]
+    (NO Copyright)") → per-track `skipDerivatives`, which must not drop official remixes (League's
+    Worlds remixes, Fortnite's Emote Remix lobby music): the uploader decides. And the composer's
+    own "OST (Official)" video now beats a fan playlist (`officialVideo`); guard it against sequels
+    ("Tetris Effect", "The Sims 4") with the playlist ranking plus a name-only rule.

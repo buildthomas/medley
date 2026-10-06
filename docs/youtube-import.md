@@ -39,6 +39,25 @@ one passes. Requests use `hl=en`, so uploader-provided English title translation
 as a Library button and `import-headless --fix-foreign`. Fallback: a full-soundtrack *video* with a
 timestamped tracklist. Personal games with `sources` skip all of this.
 
+**The official upload wins** (`officialVideo`): when the best playlist isn't official (publisher,
+label, composer channel, YouTube Music album: `officialPlaylist`), the importer also searches
+"<title> OST official" for one video with a timestamped tracklist. It must be named for the work
+and nothing else (only boilerplate and the release year, so not "Tetris Effect" or "The Sims 4"),
+score ≥ 9 under the playlist ranking, be marked official (title, official/composer channel, or
+"official upload" in the description) and have at least half as many tracks as the playlist.
+("Helltaker OST (Official)" by Mittsies beat a fan playlist with remixes mixed in.) On 80 popular
+works it changed 4 picks, all to the real soundtrack.
+
+**Derivative tracks** (`skipDerivatives`, in `draftFromLink` so pasted links, auto-imports and
+sync all get it) are unticked: `FAN_EDIT` (no copyright, fan-made, nightcore, slowed, sped up,
+8D) always; `VARIANT` (remix, cover, lo-fi, mashup, hour-long loops) only when unofficial: not
+when the title says "official", the uploader is official or uploaded ≥ 2 of the playlist's plain
+tracks, or a composer is named (Riot's Worlds remixes, Fortnite's "Emote Remix" lobby music and
+Cyberpunk's "SAMURAI Cover" stay). Nothing is skipped when the word is in the work's name or ≥ 75%
+of the playlist is like that (a remix album, e.g. Celeste's B-Sides). Pasted links show skipped
+tracks unticked in the review. "Unofficial soundtrack" (in-game music without an album release)
+and "(Extended)" loops are the real music and stay.
+
 ## Cleaning titles: `parse.ts`
 
 - `cleanTrackTitle(raw, names)`: removes game-name variants (roman ↔ arabic numerals,

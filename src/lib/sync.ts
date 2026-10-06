@@ -51,7 +51,7 @@ async function syncOne(source: Source, game: CatalogGame, result: SyncResult) {
     }
   }
   for (const d of fresh.values()) {
-    if (have.has(d.key)) continue;
+    if (have.has(d.key) || !d.include) continue; // (not included: a fan remix added later)
     // The same video may already be in the library via another source; leave that one alone.
     if (await db.tracks.get(d.key)) continue;
     additions.push({
