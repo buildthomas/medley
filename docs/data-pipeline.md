@@ -6,6 +6,22 @@ data). Output is committed as `src/data/*.json` and refreshed weekly at runtime 
 the server's data dir (`MEDLEY_DATA_DIR`, outside the repo; see `scripts/paths.mjs`). Personal
 games come from `my-games.json` in the config dir. No API keys anywhere.
 
+## Where every piece of data comes from
+
+| What | Source | Key? |
+|---|---|---|
+| Games: year, genres, series, composers, platforms, developer, Steam id | [Wikidata](https://www.wikidata.org) | No |
+| Game collections (Nintendo per console, top per year, indie hits), keywords | Wikidata + [SteamSpy](https://steamspy.com) | No |
+| Films & series: studio, composers, genres, network, posters | Wikidata + Wikipedia | No |
+| Anime: titles, studio, format, tags, OP/ED/insert songs with artists | [AniList](https://anilist.co) GraphQL + [AnimeThemes](https://animethemes.moe) API | No |
+| Covers | Steam, Wikipedia infoboxes, Wikimedia Commons, AniList, Roblox icons (linked, never copied) | No |
+| Playlists, video titles, durations, tracklists | YouTube pages, read by the server (`server/youtube.ts`) | No |
+| Playback | YouTube IFrame Player API | No |
+
+`npm run catalog` rebuilds everything (~30–40 min, mostly Wikidata/Wikipedia pacing; `--only
+games,anime` for a subset). Requests carry a generic User-Agent; set `MEDLEY_CONTACT` to add
+your email or URL, as Wikimedia prefers.
+
 ## Builders
 
 | Builder | Output | Sources | Time |

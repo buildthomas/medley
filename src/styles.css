@@ -1274,8 +1274,9 @@ code {
   border-radius: 9px;
   line-height: 0;
 }
+/* Same highlight as the main player's (button.liked): like, shuffle and loop. */
 .pip-controls button.liked {
-  color: var(--brand-2);
+  color: var(--accent);
 }
 .pip-controls .pip-play {
   background: var(--accent);
