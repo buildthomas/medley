@@ -364,7 +364,9 @@ const VOCAB: Record<'game' | 'screen' | 'anime', Vocab> = {
     queries: (g) => [`${g.title} OST`, `${g.title} original soundtrack`],
     good: /\bost\b|soundtrack|sound track|\bbgm\b|original score|\bmusic\b/i,
     // Fan-made videos set to music ("Runescape Music Videos": machinima with random songs).
-    bad: new RegExp(`${COMMON_BAD.source}|movie|motion picture|\\bfilm\\b|\\banime\\b|\\bseries\\b|playthrough|walkthrough|longplay|gameplay|let'?s play|orchestra(l)? (cover|arrangement)|music videos?|\\b[gm]?mv\\b|fan ?made|tribute|montage|mashup|machinima`, 'i'),
+    bad: new RegExp(`${COMMON_BAD.source}|movie|motion picture|\\bfilm\\b|\\banime\\b|\\bseries\\b|playthrough|walkthrough|longplay|gameplay|let'?s play|orchestra(l)? (cover|arrangement)|music videos?|\\b[gm]?mv\\b|fan ?made|tribute|montage|mashup|machinima` +
+        // Re-recordings, not the music you hear in the game ("RuneScape: The Orchestral Collection").
+        `|orchestral (collection|arrangements?|versions?|edition|suite)|\\bsymphon(y|ic)\\b|\\barranged\\b|arrangements?\\b|piano collections?|\\bconcert\\b`, 'i'),
   },
   screen: {
     queries: (w) =>
@@ -440,6 +442,7 @@ export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHi
   // A game and a film with the same name ("Harry Potter and the Chamber of Secrets"): playlists
   // must show which one they are, or they're as likely the other's soundtrack.
   const clash = nameClash(game, games);
+  const ownBad = [game.title, ...(game.altTitles ?? [])].some((n) => vocab.bad.test(n));
   return hits
     .map((hit) => {
       const t = ` ${normalize(hit.title)} `;
@@ -449,12 +452,19 @@ export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHi
       // Words that aren't the title or OST boilerplate suggest a different product
       // ("Saint Seiya Hades OST" when looking for "Hades").
       const before = t.slice(0, t.indexOf(target)).trim().split(' ').filter((w) => w && !FILLER.has(w));
-      const after = t
+      const afterAll = t
         .slice(t.indexOf(target) + target.length)
         .trim()
         .split(' ')
-        .filter((w) => w && !FILLER.has(w) && !/^\d+$/.test(w));
+        .filter((w) => w && !FILLER.has(w));
+      const after = afterAll.filter((w) => !/^\d+$/.test(w));
       score -= 2.5 * Math.min(before.length, 3) + 0.75 * Math.min(after.length, 4);
+      // Nothing but the name and boilerplate ("RuneScape Music", "Celeste OST"): the whole
+      // soundtrack, not one area's or one mood's slice of it ("Fremennik - RuneScape Music").
+      // A leftover number other than the release year (or a "1": "Mafia 1 OST") is something
+      // else ("Roblox 3008 OST").
+      const sameWork = (w: string) => w === '1' || (!!game.year && Math.abs(Number(w) - game.year) <= 1);
+      if (!before.length && afterAll.every(sameWork)) score += 1.5;
       // A number right after the title is another installment ("Mamma Mia 2 Soundtrack",
       // "Doom 2 OST", "… Season 2"); "1 & 2" playlists mix the sequel in.
       const next = t.slice(t.indexOf(target) + target.length).trim();
@@ -471,7 +481,9 @@ export async function rankPlaylistCandidates(game: CatalogGame, hits: PlaylistHi
       if (clash) score += clashScore(game, clash, `${hit.title} ${hit.channel}`);
       // "OST" / "soundtrack" say what it is; a bare "music" ("RuneScape Music") is weaker evidence.
       if (vocab.good.test(hit.title)) score += STRONG_GOOD.test(hit.title) ? 3 : 1.5;
-      if (vocab.bad.test(hit.title)) score -= 6;
+      // When the work's own name has a "bad" word (Castlevania: Symphony of the Night), only the
+      // rest of the playlist title counts.
+      if (ownBad ? vocab.bad.test(t.replace(target, ' ')) : vocab.bad.test(hit.title)) score -= 6;
       if (OFFICIAL.test(hit.channel)) score += 1.5;
       if (hit.title.startsWith('Album - ') || hit.id.startsWith('OLAK5uy_')) score += 1.5;
       const n = hit.videoCount ?? 0;

@@ -104,3 +104,10 @@
     counted as much as "OST", nothing penalised fan videos, and a 9+ score skipped the second
     search. Now "music videos", GMV/MMV, fan-made, tribute, montage, mashup and machinima are
     `bad` for games, and a bare "music" earns +1.5 instead of +3.
+    Then it took *The Orchestral Collection* (a re-recording): arrangement albums (orchestral
+    collection/arrangement, symphonic, arranged, piano collections, concert) are `bad` too, unless
+    the word is in the work's own name (*Castlevania: Symphony of the Night*), and a playlist named
+    only for the work ("RuneScape Music") gets +1.5 over slices ("Fremennik - RuneScape Music").
+    A leftover number cancels that ("Roblox 3008 OST"), except a "1" or the release year. Any
+    ranking change: compare the top pick before/after for ~80 popular works (YouTube answers are
+    cached, so it's quick).
