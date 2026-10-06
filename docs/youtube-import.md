@@ -22,6 +22,9 @@ the shapes are the only YouTube-specific knowledge in the codebase.
 
 ## Ranking candidates: `importer.rankPlaylistCandidates`
 
+> Changing anything in this file's territory? Run `npm run eval:imports` before and after
+> (docs/development.md, *Import evals*).
+
 Must contain the normalised game title, otherwise discarded. Then:
 +6 base, −7 if the title matches a *different, longer* catalog game ("Final Fantasy VII Remake"
 when looking for "Final Fantasy VII"), −2.5 per extra word before the title and −0.75 per extra

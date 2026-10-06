@@ -21,7 +21,8 @@ one-line summary. Read only what your task needs.
 ```bash
 npm install
 npm run dev          # http://localhost:32123 (Vite + a small API middleware for YouTube)
-npm run typecheck    # tsc --noEmit: the only automated check; run it after every change
+npm run typecheck    # tsc --noEmit: run it after every change
+npm run eval:imports # import quality check: run before AND after any change to how music is found/imported
 ```
 
 There is no test suite. Verify behaviour in the browser (the app logs nothing on success).
@@ -58,5 +59,11 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
    `src/styles.css` (`--bg`, `--accent`, …), no new dependencies without a good reason.
 6. **Never edit regexes or template literals through `node -e`, heredocs or sed.** The shell
    eats backslashes and backticks. Use the Edit/Write tools.
-7. Read [docs/gotchas.md](docs/gotchas.md) before debugging anything strange. Most past
+7. **Any change to finding or importing music** (`src/lib/importer.ts`, `importers/*`, `parse.ts`,
+   `server/youtube.ts`) gets an import eval: run `npm run eval:imports` before the change (it saves
+   a baseline) and after it, then read every "⚑" change it reports and the known-tricky works at
+   the end. A tweak that fixes one title often breaks others (it has, repeatedly). When you fix a
+   title, add it to `REGRESSIONS` in `scripts/eval-imports.ts`. See
+   [docs/development.md](docs/development.md#import-evals).
+8. Read [docs/gotchas.md](docs/gotchas.md) before debugging anything strange. Most past
    surprises are written down there.

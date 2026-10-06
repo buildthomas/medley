@@ -17,6 +17,7 @@ repo (`scripts/paths.mjs`); the user's library is in the browser and moves via b
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run catalog` | Rebuild all `src/data/*.json` (≈30–40 min; +≈30 min the first time for Steam keywords) |
 | `npm run catalog -- --only games,anime` | Rebuild some domains (`games`, `screen`, `anime`); other domains' collections are kept |
+| `npm run eval:imports` | Import quality check: imports ~80 works in memory and lists what changed since the last run (see development.md, *Import evals*; needs `npm run dev`) |
 | `npm run import-all` | Headless bulk import of all collections + starter pack → `medley-library.json` in the data dir (needs `npm run dev` running) |
 | `npx tsx scripts/import-headless.ts --groups mine,nintendo --out file.json` | Limit to groups; re-run to resume; `--retry-failed` retries games that found nothing |
 | `npx tsx scripts/try-import.ts import anime frieren` | Try an importer on one title without touching your library (`candidates` instead of `import` lists ranked playlists) |

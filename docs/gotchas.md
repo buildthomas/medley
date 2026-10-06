@@ -116,3 +116,5 @@
     Worlds remixes, Fortnite's Emote Remix lobby music): the uploader decides. And the composer's
     own "OST (Official)" video now beats a fan playlist (`officialVideo`); guard it against sequels
     ("Tetris Effect", "The Sims 4") with the playlist ranking plus a name-only rule.
+42. **Tetris imports "Tetris Worlds" as its GBA version** (found by the first `eval:imports` run,
+    open): version candidates are matched by platform, and a spin-off on that platform passes.

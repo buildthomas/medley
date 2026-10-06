@@ -19,11 +19,34 @@ already made with the owner (so you don't re-litigate them). Read this before yo
 | Change | How to check it |
 |---|---|
 | UI | The running app at desktop width and at 375×812. Check `document.documentElement.scrollWidth === innerWidth` (no sideways scrolling) |
-| Importers (`src/lib/importer.ts`, `importers/*`) | `npx tsx scripts/try-import.ts import <kind> <title>` runs the real import against an in-memory database and prints every track with role/vocal/artist. `candidates` instead of `import` ranks playlists; `songs` shows each anime OP/ED's top YouTube candidates with scores. Needs `npm run dev` running |
+| Importers (`src/lib/importer.ts`, `importers/*`) | **Always** the import eval (below), before and after. For one title: `npx tsx scripts/try-import.ts import <kind> <title>` runs the real import against an in-memory database and prints every track with role/vocal/artist. `candidates` instead of `import` ranks playlists; `songs` shows each anime OP/ED's top YouTube candidates with scores. Needs `npm run dev` running |
 | Library logic (commitDraft, migrations, repairs) | A throwaway `.mts` script that imports `fake-indexeddb/auto`, then the app modules, seeds rows and prints the result. Put it in a gitignored folder inside the repo (packages must resolve), e.g. `data/`, and delete it after |
 | Catalog builders | Run one builder alone (`npm run catalog -- --only anime`) and inspect `src/data/*.json` with `node -e` |
 | Server / hosting | `npm run build`, then run `node server/serve.ts` with `PORT=5190`, `MEDLEY_DATA_DIR`/`MEDLEY_CONFIG_DIR` pointing at temp folders (never the real ones), and probe with curl (`/api/session`, `/healthz`). Add an `invites.json` there to test sign-in; `MEDLEY_ROLE=web` + `node server/worker.ts` for the split setup |
 | CDN builds | `MEDLEY_ASSET_URL=https://cdn.example.com/x/ npx vite build --outDir <temp>` and read the emitted `index.html` |
+
+## Import evals
+
+Finding music is all heuristics (playlist ranking, fan-remix filtering, official uploads, anime
+song picks), and every fix so far has had side effects somewhere else. `npm run eval:imports`
+makes those visible:
+
+1. **Before** changing anything: `npm run eval:imports` (needs `npm run dev`). It imports ~80 works
+   (popular games, films, series, anime, some mid-popularity games, plus `REGRESSIONS`: works that
+   went wrong before) into an in-memory database, and saves what each one got: sources, track
+   count, sung tracks, OP/ED slots and their songs, tracks skipped as fan remixes/covers.
+2. Make the change.
+3. **After:** run it again. Every difference from the previous run is listed with "⚑" (source
+   changed, track counts, newly skipped tracks, OP/ED songs). Judge each one: better, worse or
+   neutral. Then check the known-tricky works printed at the end against their expectation.
+4. If you fixed a title, add it to `REGRESSIONS` in `scripts/eval-imports.ts` with what "right"
+   looks like, so the next change can't silently undo it.
+
+Options: `--quick` (only `REGRESSIONS`), `--only "Title,Title"`, `--against <file>` (compare
+with a specific run). Runs are saved in `<data dir>/eval/` (outside the repo: YouTube's answers
+drift, so a committed baseline would go stale); `imports-latest.json` holds every work's most
+recent result. YouTube answers are cached by the dev server, so a rerun takes a minute or two
+and before/after see the same search results.
 
 The Claude desktop browser pane can't open Picture-in-Picture windows and doesn't draw while
 hidden (no `requestAnimationFrame`); test the pop-out in Chrome/Edge.

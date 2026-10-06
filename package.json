@@ -14,6 +14,7 @@
     "catalog": "node scripts/build-catalog.mjs",
     "typecheck": "tsc --noEmit",
     "import-all": "tsx scripts/import-headless.ts --starter",
+    "eval:imports": "tsx scripts/eval-imports.ts",
     "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
