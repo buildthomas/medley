@@ -29,6 +29,9 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'add', label: 'Add link' },
 ];
 
+// index.html's title (also what search engines and link previews show), for when nothing plays.
+const HOME_TITLE = document.title;
+
 export function App() {
   const [tab, setTabState] = useState<Tab>(() => {
     const t = readUrlState().tab;
@@ -66,7 +69,7 @@ export function App() {
   useEffect(() => {
     const t = session.current;
     const g = session.currentGame;
-    document.title = t && g ? `${t.title} · ${g.title}` : 'Medley';
+    document.title = t && g ? `${t.title} · ${g.title}` : HOME_TITLE;
   }, [session.current, session.currentGame]);
 
   const compact = tab !== 'listen';
