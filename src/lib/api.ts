@@ -1,5 +1,7 @@
 // Client for the local /api/* YouTube metadata endpoints (server/plugin.ts).
 
+import { PREVIEW, PREVIEW_ONLY_MESSAGE } from './preview';
+
 export interface PlaylistHit {
   kind: 'playlist';
   id: string;
@@ -36,6 +38,7 @@ export function apiUrl(path: string) {
 }
 
 async function get<T>(path: string): Promise<T> {
+  if (PREVIEW) throw new Error(PREVIEW_ONLY_MESSAGE);
   let res: Response;
   try {
     res = await fetch(apiUrl(path));

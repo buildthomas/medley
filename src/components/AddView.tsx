@@ -1,3 +1,4 @@
+import { INSTALL_URL, PREVIEW } from '../lib/preview';
 import { useEffect, useRef, useState } from 'react';
 import { exportLibrary, importLibrary } from '../db';
 import { parseYouTubeLink, searchPlaylists, type PlaylistHit } from '../lib/api';
@@ -125,61 +126,77 @@ export function AddView() {
 
       {!draft && (
         <>
-          <section className="card">
-            <h2>Add from a YouTube link</h2>
-            <p className="muted">
-              Paste one or more playlist or video links. Full-OST videos with a timestamped tracklist in the
-              description are split into separate tracks. Playlists that mix several titles are grouped per title.
-            </p>
-            <textarea
-              rows={3}
-              placeholder="https://www.youtube.com/playlist?list=…"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), fetchLinks())}
-            />
-            <div className="row-actions">
-              <button className="primary" disabled={busy || !input.trim()} onClick={fetchLinks}>
-                {busy ? 'Reading…' : 'Read link'}
-              </button>
-            </div>
-          </section>
-
-          <section className="card">
-            <h2>Search YouTube playlists</h2>
-            <div className="toolbar">
-              <input
-                className="search grow"
-                placeholder="e.g. Hollow Knight Silksong OST"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && runSearch()}
+          {PREVIEW ? (
+            <section className="card">
+              <h2>Adding music</h2>
+              <p className="muted">
+                This is the preview, which runs without Medley's server, so it can't read YouTube: adding links, searching
+                playlists and importing anime lists are off. Everything you add in the preview's demo library still counts:
+                likes, plays and settings move with you to a local install (<b>Move to my local Medley</b> at the top).
+              </p>
+              <a className="button" href={INSTALL_URL} target="_blank" rel="noreferrer">
+                Get Medley ↗
+              </a>
+            </section>
+          ) : (
+            <>
+            <section className="card">
+              <h2>Add from a YouTube link</h2>
+              <p className="muted">
+                Paste one or more playlist or video links. Full-OST videos with a timestamped tracklist in the
+                description are split into separate tracks. Playlists that mix several titles are grouped per title.
+              </p>
+              <textarea
+                rows={3}
+                placeholder="https://www.youtube.com/playlist?list=…"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), fetchLinks())}
               />
-              <button disabled={busy} onClick={runSearch}>
-                Search
-              </button>
-            </div>
-            {hits && (
-              <ul className="candidates">
-                {hits.map((h) => (
-                  <li key={h.id}>
-                    <a href={`https://www.youtube.com/playlist?list=${h.id}`} target="_blank" rel="noreferrer">
-                      {h.title}
-                    </a>
-                    <span className="muted small">
-                      {h.channel} · {h.videoCount ?? '?'} videos
-                    </span>
-                    <button className="small-btn" disabled={busy} onClick={() => open(h.id)}>
-                      Review
-                    </button>
-                  </li>
-                ))}
-                {!hits.length && <li className="muted">No playlists found.</li>}
-              </ul>
-            )}
-          </section>
+              <div className="row-actions">
+                <button className="primary" disabled={busy || !input.trim()} onClick={fetchLinks}>
+                  {busy ? 'Reading…' : 'Read link'}
+                </button>
+              </div>
+            </section>
 
-          <AnimeListImport />
+            <section className="card">
+              <h2>Search YouTube playlists</h2>
+              <div className="toolbar">
+                <input
+                  className="search grow"
+                  placeholder="e.g. Hollow Knight Silksong OST"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && runSearch()}
+                />
+                <button disabled={busy} onClick={runSearch}>
+                  Search
+                </button>
+              </div>
+              {hits && (
+                <ul className="candidates">
+                  {hits.map((h) => (
+                    <li key={h.id}>
+                      <a href={`https://www.youtube.com/playlist?list=${h.id}`} target="_blank" rel="noreferrer">
+                        {h.title}
+                      </a>
+                      <span className="muted small">
+                        {h.channel} · {h.videoCount ?? '?'} videos
+                      </span>
+                      <button className="small-btn" disabled={busy} onClick={() => open(h.id)}>
+                        Review
+                      </button>
+                    </li>
+                  ))}
+                  {!hits.length && <li className="muted">No playlists found.</li>}
+                </ul>
+              )}
+            </section>
+
+            <AnimeListImport />
+            </>
+          )}
 
           <section className="card">
             <h2>Backup</h2>

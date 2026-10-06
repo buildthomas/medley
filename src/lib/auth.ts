@@ -3,6 +3,7 @@
 // only ever learns who's signed in, never the token.
 
 import { useSyncExternalStore } from 'react';
+import { PREVIEW } from './preview';
 
 export interface AuthState {
   required: boolean;
@@ -17,6 +18,8 @@ const set = (next: AuthState) => {
 };
 
 export async function checkAuth(): Promise<AuthState> {
+  // The preview has no server, so nothing to sign in to.
+  if (PREVIEW) return set({ required: false, user: null }), state!;
   try {
     const res = await fetch('/api/session', { cache: 'no-store' });
     if (res.ok) {

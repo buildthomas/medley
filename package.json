@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:pages": "tsc --noEmit && vite build --mode pages",
     "serve": "node server/serve.ts",
     "worker": "node server/worker.ts",
     "refresh": "node scripts/refresh.mjs",

@@ -65,5 +65,8 @@ There is no test suite. Verify behaviour in the browser (the app logs nothing on
    the end. A tweak that fixes one title often breaks others (it has, repeatedly). When you fix a
    title, add it to `REGRESSIONS` in `scripts/eval-imports.ts`. See
    [docs/development.md](docs/development.md#import-evals).
-8. Read [docs/gotchas.md](docs/gotchas.md) before debugging anything strange. Most past
+8. **The GitHub Pages preview** runs the same code without a server (`PREVIEW` in
+   `src/lib/preview.ts`). Anything new that calls the server must be skipped or explained there;
+   check with `npm run build:pages` (docs/hosting.md, *GitHub Pages preview*).
+9. Read [docs/gotchas.md](docs/gotchas.md) before debugging anything strange. Most past
    surprises are written down there.

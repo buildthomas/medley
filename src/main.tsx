@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { checkAuth } from './lib/auth';
 import { transferFromOldOrigin } from './lib/originTransfer';
+import { seedDemoLibrary } from './lib/preview';
+import { receiveFromPreview } from './lib/previewHandoff';
 import { migrateLegacyStorage } from './migrate';
 import './styles.css';
 import './discover.css';
@@ -23,6 +25,10 @@ async function start() {
   await migrateLegacyStorage()
     .then(transferFromOldOrigin)
     .catch((e) => console.error('Moving your library to the new storage failed; your old data is untouched.', e));
+  // Opened by the GitHub Pages preview's "Move to my local Medley": take its library. In the
+  // preview itself: start with the demo library.
+  await receiveFromPreview().catch((e) => console.error('Taking over the preview library failed.', e));
+  await seedDemoLibrary().catch((e) => console.error('Loading the demo library failed.', e));
 
   // A hosted, invite-only Medley shows only its home page, with sign-in, until you're in
   // (never locally).

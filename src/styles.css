@@ -1303,6 +1303,46 @@ code {
   transform: translateY(24px);
 }
 
+/* ---------- preview banner (GitHub Pages preview; locally only after a hand-over) ---------- */
+.preview-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 8px 24px;
+  font-size: 13px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--line);
+}
+.preview-banner a {
+  color: var(--accent);
+}
+.preview-result {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+a.button {
+  display: inline-block;
+  justify-self: start;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--text);
+  text-decoration: none;
+}
+a.button:hover {
+  border-color: var(--accent);
+}
+@media (max-width: 760px) {
+  .preview-banner {
+    padding: 8px 16px;
+  }
+  .preview-banner .spacer {
+    display: none;
+  }
+}
+
 /* ---------- home (and sign-in on a hosted Medley) ---------- */
 .home {
   display: grid;

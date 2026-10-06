@@ -13,7 +13,7 @@
 - **Duplicate soundtracks** across a game and its remaster aren't merged.
 - **Mobile background playback** isn't possible with the YouTube iframe (YouTube pauses hidden
   embeds; background play is a Premium feature). We resume on return instead.
-- **Static hosting** would need the `/api` functions as serverless functions (see operations.md).
+- **A full static deployment** (adding music without a server) would need the `/api` functions as serverless functions. The GitHub Pages *preview* exists (hosting.md) but can't add music.
 - **Mood/energy tags** (calm, intense, upbeat): skipped for now. Could come from track types +
   title keywords, or an optional LLM pass.
 - **More domains** (e.g. classical, musicals as their own domain): add a builder in `scripts/`,

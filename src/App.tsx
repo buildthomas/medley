@@ -5,6 +5,7 @@ import { FiltersPanel } from './components/FiltersPanel';
 import { LibraryView } from './components/LibraryView';
 import { BulkStatus } from './components/BulkStatus';
 import { Home } from './components/Home';
+import { PreviewBanner } from './components/PreviewBanner';
 import { Logo } from './components/Logo';
 import { Overlays } from './components/Overlays';
 import { setTabHandler } from './lib/nav';
@@ -18,6 +19,7 @@ import { readUrlState, writeUrlState } from './lib/urlState';
 import { ensureMyGames, resumeInterrupted, runUpdate, syncLibraryMeta } from './lib/updater';
 import type { Filters } from './types';
 import { useSession } from './useSession';
+import { PREVIEW } from './lib/preview';
 
 type Tab = 'home' | 'listen' | 'library' | 'discover' | 'add';
 const TABS: { id: Tab; label: string }[] = [
@@ -52,6 +54,7 @@ export function App() {
       await syncLibraryMeta();
       // Ask the browser to keep the library once there is one (see lib/storage.ts).
       if (session.games.length || (await db.games.count())) void requestPersistence();
+      if (PREVIEW) return; // the rest reads YouTube or the server
       await resumeInterrupted();
       await ensureMyGames();
       await runUpdate();
@@ -82,6 +85,7 @@ export function App() {
           ))}
         </nav>
       </header>
+      <PreviewBanner />
       <BulkStatus />
 
       <main>

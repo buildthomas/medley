@@ -82,6 +82,11 @@ uploaded and nobody is watching. Back it up with one click whenever you like.
 
 ## Get started
 
+**Just curious?** [Try the preview in your browser](https://buildthomas.github.io/medley/): browse
+everything and play a demo library. It can't add music (that needs Medley's own little server),
+but whatever you like and play there moves with you when you install it.
+
+
 You'll need [Node.js](https://nodejs.org) (version 22.18 or newer). Then:
 
 ```bash
