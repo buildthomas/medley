@@ -1,23 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { signIn } from '../lib/auth';
+import { franchiseOf, useCatalog } from '../lib/catalog';
 import { Logo } from './Logo';
 
-const DOMAINS = [
-  { icon: '🎮', title: 'Games', text: 'Soundtracks from thousands of games, from NES classics to this year’s releases.' },
-  { icon: '🌸', title: 'Anime', text: 'Every opening, ending and insert song, by name and artist, plus the score.' },
-  { icon: '🎬', title: 'Film & TV', text: 'Disney and Pixar sing-alongs, musicals, scores and series themes.' },
-];
-
-const FEATURES = [
-  ['Your own shuffle', 'Pick what plays: genres, series, openings only, sing-along songs, era. Variety and familiarity are yours to tune.'],
-  ['One click to add', 'Choose a title and Medley finds its soundtrack, or paste any YouTube playlist.'],
-  ['Keeps itself fresh', 'New releases, new episodes’ songs and changed playlists arrive by themselves every week.'],
-  ['Plays anywhere', 'Through YouTube’s own player, with media keys and a pop-out mini player.'],
-];
+/** Posters and box art only (no logos or wide banners), so the strip reads as one shelf. */
+const POSTER = /library_600x900|anilistcdn|upload\.wikimedia\.org\/.+\.jpe?g$/i;
+const REEL = 14;
 
 /**
- * The home page (the logo leads here). Doubles as the sign-in page on a hosted, invite-only
- * Medley: then it's the only thing shown until you're in (main.tsx).
+ * The home page (the logo leads here): one line on what Medley is, the way in, and a slow strip
+ * of covers. It doubles as the sign-in page on a hosted, invite-only Medley, where it's the only
+ * thing shown until you're in (main.tsx); the catalog isn't loaded there, so no strip.
  */
 export function Home({ signInRequired, onSignedIn, onNavigate }: { signInRequired?: boolean; onSignedIn?(): void; onNavigate?(tab: 'discover' | 'listen'): void }) {
   return (
@@ -30,53 +23,61 @@ export function Home({ signInRequired, onSignedIn, onNavigate }: { signInRequire
         </header>
       )}
       <section className="home-hero">
-        <div className="home-pitch">
-          <p className="eyebrow">Games · anime · film &amp; TV</p>
-          <h1>
-            Every story has <span className="dim">a sound.</span>
-          </h1>
-          <p className="home-lede">
-            Medley is your own radio for the music of the things you love: game soundtracks, anime openings and endings,
-            film and TV scores and songs, shuffled your way.
-          </p>
-          {signInRequired ? null : (
-            <div className="row-actions">
-              <button className="primary big" onClick={() => onNavigate?.('discover')}>
-                Discover music
-              </button>
-              <button className="big" onClick={() => onNavigate?.('listen')}>
-                Start listening
-              </button>
-            </div>
-          )}
-        </div>
-        {signInRequired && <SignInCard onSignedIn={onSignedIn} />}
-      </section>
-
-      <section className="home-domains" aria-label="What's in Medley">
-        {DOMAINS.map((d) => (
-          <div key={d.title} className="home-domain">
-            <span className="home-domain-icon" aria-hidden>
-              {d.icon}
-            </span>
-            <h2>{d.title}</h2>
-            <p className="muted">{d.text}</p>
+        <p className="eyebrow">Games · Anime · Film &amp; TV</p>
+        <h1>
+          Every story has <span className="dim">a sound.</span>
+        </h1>
+        <p className="home-lede">Your own radio for soundtracks, openings and scores, shuffled your way.</p>
+        {signInRequired ? (
+          <SignInCard onSignedIn={onSignedIn} />
+        ) : (
+          <div className="home-actions">
+            <button className="primary big" onClick={() => onNavigate?.('listen')}>
+              Start listening
+            </button>
+            <button className="big" onClick={() => onNavigate?.('discover')}>
+              Discover music
+            </button>
           </div>
-        ))}
+        )}
       </section>
+      {!signInRequired && <CoverReel />}
+      <p className="home-foot muted small">Plays through YouTube · your library stays in your browser</p>
+    </div>
+  );
+}
 
-      <section className="home-features">
-        {FEATURES.map(([title, text]) => (
-          <div key={title}>
-            <h3>{title}</h3>
-            <p className="muted">{text}</p>
-          </div>
+/** The best-known titles of each domain, interleaved, drifting slowly sideways. */
+function CoverReel() {
+  const cat = useCatalog();
+  const covers = useMemo(() => {
+    if (!cat) return [];
+    // One title per series, so it isn't three GTAs in a row.
+    const pick = (kind: string) => {
+      const seen = new Set<string>();
+      return cat.games
+        .filter((g) => (g.kind ?? 'game') === kind && g.covers?.some((c) => POSTER.test(c)))
+        .sort((a, b) => (b.pop ?? 0) - (a.pop ?? 0))
+        .filter((g) => {
+          const key = franchiseOf(g) ?? g.id;
+          return !seen.has(key) && !!seen.add(key);
+        })
+        .slice(0, REEL)
+        .map((g) => ({ id: g.id, title: g.title, src: g.covers!.find((c) => POSTER.test(c))! }));
+    };
+    const lists = [pick('game'), pick('anime'), pick('film')];
+    const out: { id: string; title: string; src: string }[] = [];
+    for (let i = 0; i < REEL; i++) for (const l of lists) if (l[i]) out.push(l[i]);
+    return out;
+  }, [cat]);
+  if (!covers.length) return <div className="home-reel" aria-hidden />;
+  return (
+    <div className="home-reel" aria-hidden>
+      <div className="home-reel-track">
+        {[...covers, ...covers].map((c, i) => (
+          <img key={i} src={c.src} alt="" loading="lazy" referrerPolicy="no-referrer" title={c.title} />
         ))}
-      </section>
-
-      <p className="home-foot muted small">
-        Music plays through YouTube’s embedded player. Your library, likes and history stay in your browser.
-      </p>
+      </div>
     </div>
   );
 }

@@ -91,8 +91,10 @@ export function App() {
         {tab === 'discover' && <DiscoverView session={session} />}
         {tab === 'add' && <AddView />}
 
-        {/* Always mounted so playback continues on other tabs; docks as a mini player. */}
-        <div className={`listen-layout ${compact ? 'compact' : ''}`}>
+        {/* Always mounted so playback continues on other tabs; docks as a mini player. On the
+            home page it stays out of sight until something plays (hidden, not unmounted: the
+            YouTube player inside must survive). */}
+        <div className={`listen-layout ${compact ? 'compact' : ''} ${tab === 'home' && !session.current ? 'dock-hidden' : ''}`}>
           <ListenView session={session} compact={compact} goTo={setTab} />
           {!compact && session.tracks.length > 0 && (
             <FiltersPanel filters={filters} setFilters={setFilters} games={session.games} tracks={session.tracks} />

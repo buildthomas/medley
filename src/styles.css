@@ -1295,42 +1295,49 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+/* The idle docked player on the home page: out of sight, but still mounted. */
+.listen-layout.compact.dock-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(24px);
+}
+
 /* ---------- home (and sign-in on a hosted Medley) ---------- */
 .home {
   display: grid;
-  gap: 36px;
-  padding: 24px 0 48px;
+  gap: 40px;
+  padding: 56px 0 32px;
+  justify-items: center;
+  text-align: center;
 }
 .home-gate {
   min-height: 100dvh;
-  padding: 0 0 48px;
+  padding: 0 0 32px;
+  align-content: start;
   background: radial-gradient(90% 50% at 50% 0%, var(--accent-soft), transparent 70%), var(--bg);
 }
 .home-gate > :not(.topbar) {
   width: min(1120px, 100% - 32px);
-  margin-inline: auto;
+}
+.home-gate .topbar {
+  justify-self: stretch;
 }
 .home-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-  gap: 32px;
-  align-items: center;
-  padding-top: 24px;
+  gap: 16px;
+  justify-items: center;
+  max-width: 680px;
 }
-.home:not(.home-gate) .home-hero {
-  grid-template-columns: minmax(0, 1fr);
-}
-.home-pitch {
-  display: grid;
-  gap: 14px;
-  max-width: 720px;
+.home-gate .home-hero {
+  padding-top: 8vh;
 }
 .home h1 {
   margin: 0;
-  font-size: clamp(34px, 6vw, 64px);
+  font-size: clamp(38px, 7vw, 72px);
   line-height: 1.02;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   font-weight: 800;
+  text-wrap: balance;
 }
 .home h1 .dim {
   background: var(--brand-gradient);
@@ -1339,50 +1346,57 @@ code {
   color: transparent;
 }
 .home-lede {
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.5;
   color: var(--muted);
   margin: 0;
+  max-width: 34ch;
+}
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
 }
 button.big {
-  padding: 10px 18px;
+  padding: 11px 20px;
   font-size: 15px;
-  border-radius: 10px;
+  border-radius: 999px;
 }
-.home-domains {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+/* A slow, endless shelf of covers; the list is doubled so -50% loops seamlessly. */
+.home-reel {
+  justify-self: stretch;
+  min-height: 180px;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.home-reel-track {
+  display: flex;
   gap: 14px;
+  width: max-content;
+  animation: home-reel 120s linear infinite;
 }
-.home-domain {
-  padding: 18px;
-  border-radius: 14px;
+.home-reel:hover .home-reel-track {
+  animation-play-state: paused;
+}
+.home-reel img {
+  width: 120px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
   background: var(--bg-raised);
-  border: 1px solid var(--line);
-  display: grid;
-  gap: 6px;
-  align-content: start;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
-.home-domain-icon {
-  font-size: 26px;
+@keyframes home-reel {
+  to {
+    transform: translateX(calc(-50% - 7px));
+  }
 }
-.home-domain h2 {
-  font-size: 17px;
-}
-.home-domain p,
-.home-features p {
-  margin: 0;
-  line-height: 1.5;
-}
-.home-features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 18px 24px;
-}
-.home-features h3 {
-  color: var(--text);
-  font-size: 13px;
-  margin-bottom: 4px;
+@media (prefers-reduced-motion: reduce) {
+  .home-reel-track {
+    animation: none;
+  }
 }
 .home-foot {
   margin: 0;
@@ -1390,11 +1404,14 @@ button.big {
 .signin-card {
   display: grid;
   gap: 12px;
+  width: min(360px, 100%);
+  margin-top: 12px;
   padding: 24px;
   border-radius: 16px;
   background: var(--bg-raised);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
+  text-align: left;
 }
 .signin-card h2 {
   font-size: 20px;
@@ -1403,9 +1420,16 @@ button.big {
   padding: 11px 12px;
 }
 @media (max-width: 760px) {
-  .home-hero {
-    grid-template-columns: minmax(0, 1fr);
-    padding-top: 8px;
+  .home {
+    padding-top: 28px;
+    gap: 28px;
+  }
+  .home-reel {
+    min-height: 135px;
+  }
+  .home-reel img {
+    width: 90px;
+    height: 135px;
   }
 }
 
