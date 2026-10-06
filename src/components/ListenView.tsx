@@ -7,6 +7,7 @@ import { pipSupported, usePopOut } from './PopOutPlayer';
 import { TRACK_TYPES } from '../lib/parse';
 import { Cover } from './discover/Cover';
 import { TrackRow } from './TrackRow';
+import { LoopIcon, ShuffleIcon } from './icons';
 import { openTitle, openTrack } from '../lib/nav';
 import type { Session } from '../useSession';
 import { loadVolume, saveVolume, writeUrlState } from '../lib/urlState';
@@ -24,7 +25,7 @@ export function ListenView({
   compact: boolean;
   goTo(tab: 'listen' | 'discover' | 'add'): void;
 }) {
-  const { current, currentGame, queue, gameMap, trackMap, recentPlays } = session;
+  const { current, currentGame, queue, gameMap, trackMap, recentPlays, program } = session;
   const player = useRef<PlayerHandle>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState<{ t: number; len: number | null }>({ t: 0, len: null });
@@ -115,12 +116,20 @@ export function ListenView({
       liked: !!current?.liked,
       elapsed: progress.t,
       length: progress.len,
+      program: program && {
+        label: program.label,
+        position: `${program.position}/${program.total}`,
+        shuffle: program.shuffle,
+        loop: program.loop,
+      },
     },
     {
       toggle: () => (current ? player.current?.toggle() : session.next()),
       next: skip,
       prev: session.prev,
       like: () => current && db.tracks.update(current.id, { liked: !current.liked }),
+      shuffle: () => program && session.setProgramShuffle(!program.shuffle),
+      loop: () => program && session.setProgramLoop(!program.loop),
     },
   );
 
@@ -315,6 +324,29 @@ export function ListenView({
           <button onClick={skip} title="Skip (→)">
             ⏭
           </button>
+          {program && (
+            <>
+              <button
+                className={`mode ${program.shuffle ? 'liked' : ''}`}
+                aria-pressed={program.shuffle}
+                onClick={() => session.setProgramShuffle(!program.shuffle)}
+                title={program.shuffle ? `Shuffling ${program.label}: click for its own order` : `Shuffle ${program.label}`}
+              >
+                <ShuffleIcon size={17} />
+              </button>
+              <button
+                className={`mode ${program.loop ? 'liked' : ''}`}
+                aria-pressed={program.loop}
+                onClick={() => session.setProgramLoop(!program.loop)}
+                title={program.loop ? `Looping ${program.label}: click to go back to the shuffle after the last track` : `Loop ${program.label}`}
+              >
+                <LoopIcon size={17} />
+              </button>
+              <span className="program-pos muted tabular" title={`Track ${program.position} of ${program.total} in ${program.label}`}>
+                {program.position}/{program.total}
+              </span>
+            </>
+          )}
           <div className="volume">
             <button
               className="icon"
@@ -380,19 +412,23 @@ export function ListenView({
       </div>
 
       <div className="side-lists">
-        {session.program && (
+        {program && (
           <div className="list-card program-card">
             <header>
               <h3>
-                Playing: {session.program.label}{' '}
-                <span className="muted">· {session.program.tracks.length} left</span>
+                Playing: {program.label}{' '}
+                <span className="muted tabular">
+                  · {program.position}/{program.total}
+                  {program.shuffle ? ' · shuffled' : ''}
+                  {program.loop ? ' · on loop' : ''}
+                </span>
               </h3>
               <button className="link" onClick={session.stopProgram} title="Back to the shuffle after this track">
                 back to shuffle
               </button>
             </header>
             <ol className="track-list compact-list">
-              {session.program.tracks.slice(0, 8).map((t) => (
+              {program.tracks.slice(0, 8).map((t) => (
                 <TrackRow key={t.id} track={t} work={gameMap.get(t.gameId)} showWork showArtist={false} onPlay={() => session.playNow(t.id)} />
               ))}
             </ol>
@@ -400,7 +436,7 @@ export function ListenView({
         )}
         <div className="list-card">
           <header>
-            <h3>{session.program ? 'Then the shuffle' : 'Up next'}</h3>
+            <h3>{program ? (program.loop ? 'Shuffle, once the loop is off' : 'Then the shuffle') : 'Up next'}</h3>
             <button className="link" onClick={session.reroll}>
               reshuffle
             </button>

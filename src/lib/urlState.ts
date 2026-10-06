@@ -52,7 +52,15 @@ export interface SavedSession {
 
 export interface Program {
   label: string;
+  /** The tracks in their own order (album order for a soundtrack). */
   ids: string[];
+  /** The play order: `ids`, or a shuffle of them. */
+  order: string[];
+  /** Index in `order` of the track playing now. */
+  pos: number;
+  /** Start over after the last track instead of going back to the shuffle. */
+  loop?: boolean;
+  shuffle?: boolean;
 }
 
 export function loadSavedSession(): SavedSession {
@@ -63,7 +71,7 @@ export function loadSavedSession(): SavedSession {
       return {
         queue: Array.isArray(s.queue) ? s.queue : [],
         back: Array.isArray(s.back) ? s.back : [],
-        program: s.program && Array.isArray(s.program.ids) ? s.program : null,
+        program: s.program && Array.isArray(s.program.order) && typeof s.program.pos === 'number' ? s.program : null,
       };
     }
   } catch {

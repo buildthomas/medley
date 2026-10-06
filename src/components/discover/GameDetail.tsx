@@ -112,7 +112,7 @@ export function GameDetail({
   // The whole soundtrack, in album order (or shuffled), then back to the regular shuffle.
   const playable = sorted.filter((t) => !t.banned && !t.unavailable);
   const playAll = (shuffle: boolean) =>
-    session.playProgram(`${game.title}${shuffle ? ' (shuffled)' : ''}`, playable.map((t) => t.id), { shuffle });
+    session.playProgram(game.title, playable.map((t) => t.id), { shuffle });
 
   async function remove() {
     if (!confirm(`Remove ${game.title} and its ${tracks.length} tracks from your library?`)) return;

@@ -67,6 +67,15 @@ export function useSession(filters: Filters) {
     [trackMap, gameMap, filters],
   );
 
+  /** Programs ignore the rotation filters, but never play banned or broken tracks. */
+  const programPlayable = useCallback(
+    (id: string) => {
+      const t = trackMap.get(id);
+      return !!t && !t.banned && !t.unavailable;
+    },
+    [trackMap],
+  );
+
   // Keep the up-next queue valid for the current filters and topped up.
   useEffect(() => {
     if (!tracks.length) return;
@@ -115,15 +124,20 @@ export function useSession(filters: Filters) {
       const early =
         current && opts.skipped && (opts.elapsed ?? 0) < Math.min(60, (current.duration ?? 180) * 0.5) ? current : null;
       // A program (whole soundtrack) plays in its own order and ignores the rotation filters,
-      // except for tracks you banned or that can't play.
+      // except for tracks you banned or that can't play. With loop on it starts over (reshuffled
+      // if shuffle is on); otherwise the shuffle takes over after the last track.
       let nextId: string | undefined;
       if (program) {
-        const rest = program.ids.filter((id) => {
-          const t = trackMap.get(id);
-          return t && !t.banned && !t.unavailable;
-        });
-        nextId = rest[0];
-        setProgram(rest.length > 1 ? { ...program, ids: rest.slice(1) } : null);
+        let order = program.order;
+        let i = order.findIndex((id, j) => j > program.pos && programPlayable(id));
+        if (i < 0 && program.loop) {
+          order = program.shuffle ? shuffled(program.ids) : program.ids;
+          i = order.findIndex(programPlayable);
+        }
+        if (i >= 0) {
+          nextId = order[i];
+          setProgram({ ...program, order, pos: i });
+        } else setProgram(null);
       }
       nextId ??= queueIds.find(isPlayable);
       if (!nextId) {
@@ -135,28 +149,38 @@ export function useSession(filters: Filters) {
       setQueueIds((q) => q.filter((id) => id !== nextId));
       await startTrack(nextId, early);
     },
-    [current, currentId, queueIds, isPlayable, games, tracks, filters, history, startTrack, program, trackMap],
+    [current, currentId, queueIds, isPlayable, games, tracks, filters, history, startTrack, program, programPlayable],
   );
 
   const prev = useCallback(() => {
+    // In a program, previous steps back through its order (so x/y stays right).
+    if (program && currentId === program.order[program.pos]) {
+      const i = program.order.findLastIndex((id, j) => j < program.pos && programPlayable(id));
+      if (i >= 0) {
+        setProgram({ ...program, pos: i });
+        setResumeAt(null);
+        setCurrentId(program.order[i]);
+        return;
+      }
+    }
     const id = backStack[backStack.length - 1];
     if (!id) return;
     setBackStack((b) => b.slice(0, -1));
-    if (currentId) {
-      if (program) setProgram({ ...program, ids: [currentId, ...program.ids] });
-      else setQueueIds((q) => [currentId, ...q]);
-    }
+    if (currentId && !program) setQueueIds((q) => [currentId, ...q]);
     setResumeAt(null);
     setCurrentId(id);
-  }, [backStack, currentId, program]);
+  }, [backStack, currentId, program, programPlayable]);
 
   const playNow = useCallback(
     async (id: string) => {
       if (currentId) setBackStack((b) => [...b.slice(-49), currentId]);
       setQueueIds((q) => q.filter((x) => x !== id));
+      // Jumping to a track of the program moves its position there.
+      const i = program ? program.order.indexOf(id) : -1;
+      if (program && i >= 0) setProgram({ ...program, pos: i });
       await startTrack(id);
     },
-    [currentId, startTrack],
+    [currentId, startTrack, program],
   );
 
   const reroll = useCallback(() => setQueueIds([]), []);
@@ -164,22 +188,29 @@ export function useSession(filters: Filters) {
   /** Play these tracks in this order (or shuffled) now, then return to the shuffle. */
   const playProgram = useCallback(
     async (label: string, ids: string[], opts: { shuffle?: boolean } = {}) => {
-      const order = ids.slice();
-      if (opts.shuffle) {
-        for (let i = order.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [order[i], order[j]] = [order[j], order[i]];
-        }
-      }
-      const [first, ...rest] = order;
+      const order = opts.shuffle ? shuffled(ids) : ids.slice();
+      const first = order[0];
       if (!first) return;
-      setProgram(rest.length ? { label, ids: rest } : null);
+      setProgram({ label, ids: ids.slice(), order, pos: 0, shuffle: !!opts.shuffle, loop: false });
       if (currentId) setBackStack((b) => [...b.slice(-49), currentId]);
       await startTrack(first);
     },
     [currentId, startTrack],
   );
   const stopProgram = useCallback(() => setProgram(null), []);
+  const setProgramLoop = useCallback((loop: boolean) => setProgram((p) => p && { ...p, loop }), []);
+  /** Shuffle (or restore) the tracks still to come; what has played keeps its place. */
+  const setProgramShuffle = useCallback(
+    (shuffle: boolean) =>
+      setProgram((p) => {
+        if (!p) return p;
+        const played = p.order.slice(0, p.pos + 1);
+        const seen = new Set(played);
+        const rest = p.ids.filter((id) => !seen.has(id));
+        return { ...p, shuffle, order: [...played, ...(shuffle ? shuffled(rest) : rest)] };
+      }),
+    [],
+  );
   const clearResume = useCallback(() => setResumeAt(null), []);
 
   return {
@@ -193,12 +224,23 @@ export function useSession(filters: Filters) {
     queue: queueIds.map((id) => trackMap.get(id)).filter((t): t is Track => !!t),
     program: program && {
       label: program.label,
-      tracks: program.ids.map((id) => trackMap.get(id)).filter((t): t is Track => !!t),
+      /** The tracks still to come, in play order. */
+      tracks: program.order
+        .slice(program.pos + 1)
+        .filter(programPlayable)
+        .map((id) => trackMap.get(id)!),
+      /** "x of y", counting only tracks that can play. */
+      position: program.order.slice(0, program.pos + 1).filter(programPlayable).length,
+      total: program.order.filter(programPlayable).length,
+      loop: !!program.loop,
+      shuffle: !!program.shuffle,
     },
     playProgram,
     stopProgram,
+    setProgramLoop,
+    setProgramShuffle,
     recentPlays,
-    canGoBack: backStack.length > 0,
+    canGoBack: backStack.length > 0 || (!!program && program.pos > 0),
     resumeAt,
     clearResume,
     next,
@@ -209,3 +251,12 @@ export function useSession(filters: Filters) {
 }
 
 export type Session = ReturnType<typeof useSession>;
+
+function shuffled<T>(items: T[]): T[] {
+  const a = items.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}

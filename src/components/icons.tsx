@@ -45,3 +45,35 @@ export const HeartIcon = ({ size, filled }: { size?: number; filled?: boolean })
     />
   </svg>
 );
+
+const Stroke = ({ children, size = 16 }: { children: React.ReactNode; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    {children}
+  </svg>
+);
+
+export const ShuffleIcon = ({ size }: { size?: number }) => (
+  <Stroke size={size}>
+    <path d="M4 7h3.5c2 0 3.2 1 4.3 2.7l1.4 2.2c1.1 1.8 2.3 3.1 4.6 3.1H20" />
+    <path d="M4 17h3.5c1.5 0 2.5-.6 3.4-1.6M13.6 8.6c.9-1 1.9-1.6 3.4-1.6H20" />
+    <path d="M17.5 4.5 20 7l-2.5 2.5M17.5 14.5 20 17l-2.5 2.5" />
+  </Stroke>
+);
+
+export const LoopIcon = ({ size }: { size?: number }) => (
+  <Stroke size={size}>
+    <path d="M5 11V9.5A2.5 2.5 0 0 1 7.5 7H19M16.5 4.5 19 7l-2.5 2.5" />
+    <path d="M19 13v1.5a2.5 2.5 0 0 1-2.5 2.5H5M7.5 19.5 5 17l2.5-2.5" />
+  </Stroke>
+);

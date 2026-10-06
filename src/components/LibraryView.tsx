@@ -281,7 +281,7 @@ export function LibraryView({ session }: { session: Session }) {
             </button>
             <button
               className="small-btn"
-              onClick={() => session.playProgram(`${setLabel} (shuffled)`, playable.map((t) => t.id), { shuffle: true })}
+              onClick={() => session.playProgram(setLabel, playable.map((t) => t.id), { shuffle: true })}
               title="Play these in random order, then back to the shuffle"
             >
               ⤮ Shuffle

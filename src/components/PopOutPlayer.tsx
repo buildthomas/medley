@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { HeartIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon } from './icons';
+import { HeartIcon, LoopIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon, ShuffleIcon } from './icons';
 import { formatTime } from './ui';
 
 interface PipWindowApi {
@@ -34,6 +34,8 @@ export interface PopOutState {
   liked: boolean;
   elapsed: number;
   length: number | null;
+  /** While playing a soundtrack or other set (not the radio): "x/y" and its modes. */
+  program: { label: string; position: string; shuffle: boolean; loop: boolean } | null;
 }
 
 export interface PopOutActions {
@@ -41,6 +43,8 @@ export interface PopOutActions {
   next(): void;
   prev(): void;
   like(): void;
+  shuffle(): void;
+  loop(): void;
 }
 
 function MiniPlayer({ state, actions }: { state: PopOutState; actions: PopOutActions }) {
@@ -52,8 +56,13 @@ function MiniPlayer({ state, actions }: { state: PopOutState; actions: PopOutAct
         <div className="pip-work">{state.work ?? 'Nothing playing'}</div>
         <div className="pip-title">{state.title ?? 'Press play in the main window'}</div>
         {state.artist && <div className="pip-artist">{state.artist}</div>}
-        <div className="pip-bar">
-          <div style={{ width: `${pct}%` }} />
+        <div className="pip-progress">
+          <div className="pip-bar">
+            <div style={{ width: `${pct}%` }} />
+          </div>
+          <span className="pip-time">
+            {formatTime(state.elapsed)} / {formatTime(state.length)}
+          </span>
         </div>
         <div className="pip-controls">
           <button onClick={actions.prev} title="Previous" aria-label="Previous">
@@ -68,9 +77,29 @@ function MiniPlayer({ state, actions }: { state: PopOutState; actions: PopOutAct
           <button className={state.liked ? 'liked' : ''} onClick={actions.like} title="Like" aria-label="Like">
             <HeartIcon size={14} filled={state.liked} />
           </button>
-          <span className="pip-time">
-            {formatTime(state.elapsed)} / {formatTime(state.length)}
-          </span>
+          {state.program && (
+            <>
+              <button
+                className={state.program.shuffle ? 'liked' : ''}
+                aria-pressed={state.program.shuffle}
+                onClick={actions.shuffle}
+                title={state.program.shuffle ? `Shuffling ${state.program.label}` : `Shuffle ${state.program.label}`}
+              >
+                <ShuffleIcon size={15} />
+              </button>
+              <button
+                className={state.program.loop ? 'liked' : ''}
+                aria-pressed={state.program.loop}
+                onClick={actions.loop}
+                title={state.program.loop ? `Looping ${state.program.label}` : `Loop ${state.program.label}`}
+              >
+                <LoopIcon size={15} />
+              </button>
+              <span className="pip-pos" title={`Track ${state.program.position} in ${state.program.label}`}>
+                {state.program.position}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -118,6 +147,8 @@ export function usePopOut(state: PopOutState, actions: PopOutActions) {
     next: () => actionsRef.current.next(),
     prev: () => actionsRef.current.prev(),
     like: () => actionsRef.current.like(),
+    shuffle: () => actionsRef.current.shuffle(),
+    loop: () => actionsRef.current.loop(),
   };
 
   async function popOut() {

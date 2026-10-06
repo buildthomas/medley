@@ -59,8 +59,13 @@ chips but keeps the sliders.
 - **Program:** `playProgram(label, ids, { shuffle })` plays an explicit list first (in album order
   from title pages, `lib/trackOrder.ts`) (title page
   ▶ Play / ⤮ Shuffle, *Play what's new*, track search *Play all*). It ignores filters except
-  banned/unavailable; `prev()` puts the current track back on it; `stopProgram()` returns to the
-  shuffle. Persisted with the session.
+  banned/unavailable. A program keeps its whole list (`ids`), the play order (`order`) and the
+  position (`pos`), so the players show *x/y* and `prev()` steps back through it. While one runs,
+  both players (main and pop-out) show shuffle and loop toggles: `setProgramShuffle` reorders only
+  the tracks still to come (off restores their own order); `setProgramLoop` starts over after the
+  last track (reshuffled if shuffle is on) instead of returning to the radio. `playNow` on a track
+  of the program moves the position there; `stopProgram()` returns to the shuffle. Persisted with
+  the session.
 - `next({ skipped, elapsed })`, `playNow(id)`, `prev()` (back stack of 50), `reroll()`.
 - **Resume:** on load, `?track=&t=` become `currentId` + `resumeAt`; the player *cues* at that
   offset and shows a Resume overlay (browsers block sound without a gesture).
@@ -86,4 +91,6 @@ silent element needs a prior click on the page (always true once you've pressed 
 The ⧉ button opens a 360×132 always-on-top window via the Document Picture-in-Picture API
 (Chrome/Edge 116+; hidden elsewhere). Audio stays in the main tab's YouTube iframe; the pop-out
 has its own React root (events don't cross documents through portals), the app's stylesheets
-copied in, and calls back into the session for play/pause, next, previous, like.
+copied in, and calls back into the session for play/pause, next, previous, like (and, during a
+program, shuffle and loop). Its title bar shows the page's origin (e.g. `localhost:32123`): Chrome
+always shows the origin there, to stop spoofing, and ignores `document.title`.
