@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CatalogGame } from '../types';
 import { apiUrl } from './api';
+import { PREVIEW } from './preview';
 import { createCatalogMatcher } from './parse';
 
 export interface CollectionList {
@@ -22,6 +23,7 @@ export interface Collections {
 }
 
 async function fetchJson<T>(path: string): Promise<T | null> {
+  if (PREVIEW) return null; // no server: the bundled catalogs are the only ones
   try {
     const res = await fetch(apiUrl(path));
     // 204: the server has no refreshed copy (yet); use the bundled one.

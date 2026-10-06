@@ -1,7 +1,7 @@
 {
   "name": "Medley",
   "short_name": "Medley",
-  "description": "Your own music radio: game soundtracks, anime openings, film & TV songs and artists, with your own shuffle.",
+  "description": "Your own radio for game soundtracks, anime openings and film & TV scores, with your own shuffle.",
   "start_url": "./?tab=discover",
   "scope": "./",
   "display": "standalone",

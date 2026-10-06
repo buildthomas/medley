@@ -135,6 +135,36 @@ aws s3 sync dist/assets s3://my-bucket/medley/assets --cache-control "public, ma
   connection: Node 24 honours `HTTPS_PROXY` with `NODE_USE_ENV_PROXY=1`.
 - No API key is used on purpose (quota too small for bulk imports).
 
+## GitHub Pages preview (no server)
+
+`npm run build:pages` builds the app as a static site under `/<repo>/` (`vite build --mode pages`;
+`MEDLEY_PAGES_BASE` overrides the base path). `.github/workflows/pages.yml` publishes it on every
+push to `main` (repo Settings → Pages → Source: *GitHub Actions*). It's the same app with
+`PREVIEW` on (`src/lib/preview.ts`, from the `__MEDLEY_PREVIEW__` define; locally it's false and
+the preview code is compiled out):
+
+- **No server:** no sign-in (`checkAuth`), bundled catalogs only (`fetchJson`), no background
+  updates or playlist sync (App start-up), and every YouTube read (`api.get`) throws
+  `PREVIEW_ONLY_MESSAGE`, which the add buttons show where they'd report an error. *Add link*
+  shows an explanation instead of the YouTube cards; Backup/Restore work.
+- **Demo library:** the first visit imports `src/data/demo-library.json` (15 well-known titles,
+  ~1,100 tracks), so there's music to play. Rebuild it with `npx tsx scripts/build-demo.ts` (needs
+  `npm run dev`) when its videos start disappearing.
+- **A banner** says it's the preview, links to the install, and offers **Move to my local Medley**.
+
+**Moving to a local install** (`src/lib/previewHandoff.ts`): browser storage belongs to one
+address, so the preview can't share it with `localhost:32123`. Instead the button opens
+`http://localhost:32123/?from=preview` in a new tab; the local app says it's ready to its opener,
+and the preview posts the library over. The local app accepts it only from `PREVIEW_ORIGINS`
+(the published preview, and `http://localhost:4173` for testing) and only when opened that way.
+It merges, never replaces: existing titles, sources and settings stay; likes and bans are
+combined; plays are added once (deduplicated by track and time), so moving twice is harmless.
+Forks publishing their own preview add their Pages origin to `PREVIEW_ORIGINS`.
+
+Test a Pages build locally: `npm run build:pages && npx vite preview --mode pages --port 4173`, then
+http://localhost:4173/medley/. The Claude browser pane can't open new tabs, so test the move in
+Chrome (or headless Chrome over DevTools).
+
 ## Caveats
 
 - **GitHub Pages / pure static hosting** can't run the API.

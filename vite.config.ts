@@ -8,8 +8,12 @@ import { medleyApi } from './server/plugin.ts';
 // icons stay on the app's own origin (the manifest must be same-origin to be installable).
 const assetUrl = process.env.MEDLEY_ASSET_URL?.replace(/\/?$/, '/');
 
-export default defineConfig({
-  plugins: [react(), medleyApi()],
+// `vite build --mode pages` (npm run build:pages): the GitHub Pages preview, without the server
+// (src/lib/preview.ts). It lives under /<repo>/, so it gets that base path.
+export default defineConfig(({ mode }) => ({
+  base: mode === 'pages' ? (process.env.MEDLEY_PAGES_BASE ?? '/medley/') : '/',
+  define: { __MEDLEY_PREVIEW__: JSON.stringify(mode === 'pages') },
+  plugins: mode === 'pages' ? [react()] : [react(), medleyApi()],
   // 32123: the logo's bar heights. strictPort, because browser storage is per port: drifting
   // to another port would look like an empty library.
   server: { port: 32123, strictPort: true },
@@ -18,4 +22,4 @@ export default defineConfig({
   experimental: assetUrl
     ? { renderBuiltUrl: (filename, { type }) => (type === 'public' ? `/${filename}` : `${assetUrl}${filename}`) }
     : undefined,
-});
+}));
