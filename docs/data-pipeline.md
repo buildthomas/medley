@@ -23,6 +23,9 @@ JSON), `label` (en → mul), `datePart` (respects date precision), `commonsThumb
    every indie game with ≥ 1,500 positive Steam reviews (SteamSpy), and **series completion**:
    every other game of a series that has a game in the catalog, down to 3 editions (the Shantae
    sequels have 6–11). English Wikidata aliases become `altTitles` ("FF7R").
+   **Nothing is ever dropped:** every game of the previous catalog stays (`keep`, passed in by
+   `build-catalog.mjs` and `refresh.mjs`), since people have it in their library. Without it a
+   game that slipped under a cut-off (Mixtape, 9 editions) vanished on the next rebuild.
 1. **What counts as a game:** `P31` in `GAME_CLASSES`: video game, *paired versions of a video
    game* (Fire Emblem Fates, Pokémon pairs), video game remake/remaster, expansion-like
    standalone releases, and more. Cancelled games (Q61475894) are excluded. Base catalog = ≥ 12 sitelinks.

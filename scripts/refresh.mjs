@@ -88,7 +88,13 @@ export async function runRefresh({ dataDir, configDir, log = console.log }) {
   save();
   const heartbeat = setInterval(() => writeFileSync(f.lock, String(process.pid)), 30_000);
   try {
-    const built = await buildAll({ log: say, cacheFile: join(dataDir, 'cache', 'steamspy-tags.json') });
+    // The games catalog in use now (refreshed copy, else the bundled one): its games all stay.
+    const prevGames = [join(dataDir, 'catalog.json'), join(ROOT, 'src/data/catalog.json')].find((p) => existsSync(p));
+    const built = await buildAll({
+      log: say,
+      cacheFile: join(dataDir, 'cache', 'steamspy-tags.json'),
+      previousGames: prevGames ? JSON.parse(readFileSync(prevGames, 'utf8')) : [],
+    });
     // A domain whose build failed is missing: its previous file stays (the client falls back to
     // the bundled one) and its collection groups are carried over.
     const prev = [join(dataDir, 'collections.json'), join(ROOT, 'src/data/collections.json')].find((p) => existsSync(p));

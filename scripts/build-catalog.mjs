@@ -11,8 +11,10 @@ const args = process.argv.slice(2);
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : undefined;
 const dir = new URL('../src/data/', import.meta.url);
 
+const prevGames = new URL('catalog.json', dir);
 const files = await buildAll({
   only,
+  previousGames: existsSync(prevGames) ? JSON.parse(readFileSync(prevGames, 'utf8')) : [],
   cacheFile: join(medleyPaths().dataDir, 'cache', 'steamspy-tags.json'),
 });
 

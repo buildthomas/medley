@@ -29,10 +29,11 @@ export function keepMissingGroups(files, prev) {
 }
 
 /**
- * @param {{ log?: (m: string) => void, cacheFile?: string, only?: string[] }} opts
+ * @param {{ log?: (m: string) => void, cacheFile?: string, only?: string[], previousGames?: { id: string, pop?: number }[] }} opts
+ *   previousGames: the current games catalog; its games all stay (catalog-builder `keep`)
  * @returns {Promise<Record<string, unknown>>} file name (without .json) → contents
  */
-export async function buildAll({ log = console.log, cacheFile, only } = {}) {
+export async function buildAll({ log = console.log, cacheFile, only, previousGames = [] } = {}) {
   const want = (d) => !only || only.includes(d);
   const out = {};
   const groups = [];
@@ -49,7 +50,7 @@ export async function buildAll({ log = console.log, cacheFile, only } = {}) {
     }
   };
 
-  const games = await step('games', () => buildCatalog({ log, cacheFile }));
+  const games = await step('games', () => buildCatalog({ log, cacheFile, keep: previousGames }));
   if (games) {
     out.catalog = games.catalog;
     groups.push(...games.collections.groups.map((g) => ({ ...g, domain: 'game' })));

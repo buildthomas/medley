@@ -98,7 +98,13 @@ const label = (item, out) => `
  * @param {boolean} [opts.enrich] add covers/tags/keywords/links (slow the first time: SteamSpy ~1 req/s)
  * @param {string} [opts.cacheFile] where to cache Steam keywords between builds
  */
-export async function buildCatalog({ log = console.log, enrich = true, cacheFile } = {}) {
+/**
+ * @param {object} [opts]
+ * @param {{ id: string, pop?: number }[]} [opts.keep] the previous catalog: every game in it stays
+ *   (unless Wikidata deleted it), so a rebuild never drops a game someone already has in their
+ *   library just because it slipped under a cut-off (Mixtape, 9 sitelinks, fell off a year list).
+ */
+export async function buildCatalog({ log = console.log, enrich = true, cacheFile, keep = [] } = {}) {
   const THIS_YEAR = new Date().getFullYear();
   const pop = new Map(); // qid -> sitelinks
 
@@ -201,6 +207,15 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
   // top 15. Well-loved indie games often have few Wikipedia editions (Shantae sequels: 10).
   for (const r of indieRows) pop.set(r.id, Math.max(pop.get(r.id) ?? 0, r.links));
   log(`  ${new Set(indieRows.map((r) => r.id)).size} indie games kept`);
+
+  // 4c. Everything from the previous catalog stays (see `keep`).
+  let kept = 0;
+  for (const g of keep) {
+    if (!/^Q\d+$/.test(g.id) || pop.has(g.id)) continue;
+    pop.set(g.id, g.pop ?? 0);
+    kept++;
+  }
+  if (kept) log(`  ${kept} games kept from the previous catalog`);
 
   // 5. Details for everything ------------------------------------------------------
   const games = new Map();
