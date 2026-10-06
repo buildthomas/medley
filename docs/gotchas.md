@@ -99,4 +99,4 @@
 39. **GTA VI showed as released (2025)** → a delayed work keeps its old release targets on
     Wikidata, marked *deprecated*, and `p:P577/psv:P577` reads every rank, so "earliest date"
     picked the abandoned target. The details queries skip deprecated dates (`wdt:` already reads
-    only best-rank ones). The same bug had films dated by festival-era targets (No Time to Die 2019).
+    only best-rank ones). The same bug dated delayed films by their first planned release (No Time to Die as 2019).
