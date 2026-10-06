@@ -13,7 +13,20 @@ const assetUrl = process.env.MEDLEY_ASSET_URL?.replace(/\/?$/, '/');
 export default defineConfig(({ mode }) => ({
   base: mode === 'pages' ? (process.env.MEDLEY_PAGES_BASE ?? '/medley/') : '/',
   define: { __MEDLEY_PREVIEW__: JSON.stringify(mode === 'pages') },
-  plugins: mode === 'pages' ? [react()] : [react(), medleyApi()],
+  plugins: [
+    react(),
+    ...(mode === 'pages' ? [] : [medleyApi()]),
+    {
+      // Link-preview tags need absolute URLs (index.html's %MEDLEY_SITE%): the preview's public
+      // address, MEDLEY_SITE_URL for a hosted Medley, or "/" locally.
+      name: 'medley-site-url',
+      transformIndexHtml: (html) =>
+        html.replaceAll(
+          '%MEDLEY_SITE%',
+          (process.env.MEDLEY_SITE_URL ?? (mode === 'pages' ? 'https://buildthomas.github.io/medley/' : '/')).replace(/\/?$/, '/'),
+        ),
+    },
+  ],
   // 32123: the logo's bar heights. strictPort, because browser storage is per port: drifting
   // to another port would look like an empty library.
   server: { port: 32123, strictPort: true },
