@@ -2,7 +2,7 @@
 // server/serve.ts instead. Data and personal config live outside the repo (scripts/paths.mjs).
 
 import type { Plugin } from 'vite';
-import { medleyPaths } from '../scripts/paths.mjs';
+import { loadEnvFiles, medleyPaths } from '../scripts/paths.mjs';
 import { createApi, type Handler } from './api.ts';
 import { startLegacyOrigin } from './legacy-origin.ts';
 
@@ -12,6 +12,7 @@ export function medleyApi(): Plugin {
   return {
     name: 'medley-api',
     configResolved() {
+      loadEnvFiles(); // optional settings such as MEDLEY_CONTACT (catalog refreshes run in here)
       const { dataDir, configDir } = medleyPaths({ log });
       log(`data: ${dataDir} · config: ${configDir}`);
       // Locally: no sign-in, refreshes run in this process.

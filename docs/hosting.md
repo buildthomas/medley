@@ -51,6 +51,7 @@ variables win; `.env.local` in the repo also works for local testing):
 | `MEDLEY_SECRET` | random, kept in the data dir | Signs session cookies. Set it if the data dir isn't persistent |
 | `MEDLEY_TRUST_PROXY` | off | `1` behind a reverse proxy: use `X-Forwarded-For` (rate limits) and `X-Forwarded-Proto` (secure cookies) |
 | `MEDLEY_RATE_LIMIT` | `600` | YouTube API calls per minute per IP (`0` = off) |
+| `MEDLEY_CONTACT` | unset | Your email or URL, added to the User-Agent of catalog refreshes (Wikimedia likes a contact). Unset: no contact is sent |
 | `MEDLEY_ASSET_URL` | unset | **Build time**: CDN base URL for the hashed assets |
 
 ## Sign-in (invite-only)

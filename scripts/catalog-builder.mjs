@@ -10,14 +10,13 @@
 // Sources: Wikidata (SPARQL) and SteamSpy's public "Indie" tag list. No API keys.
 
 import { enrichGames } from './enrich.mjs';
-import { inBatches, sparql as wdSparql, values } from './wd.mjs';
+import { inBatches, sparql as wdSparql, userAgent, values } from './wd.mjs';
 
 const MIN_LINKS = 12; // base catalog: games with >= this many Wikipedia language editions
 const PER_YEAR = 40; // "biggest games" per year
 const INDIE_PER_YEAR = 15;
 const FIRST_YEAR = 2010;
 
-const UA = 'medley/0.4 (personal hobby project; catalog build)';
 
 // What counts as a game. Plain "video game" (Q7889) misses whole families of notable titles:
 // paired releases (Fire Emblem Fates, Zelda: Oracle of Seasons/Ages, NieR), compilations,
@@ -161,7 +160,7 @@ export async function buildCatalog({ log = console.log, enrich = true, cacheFile
   // 4. Popular indie games per year (SteamSpy "Indie" tag → Wikidata via Steam app id) --
   log('Indie games (SteamSpy)…');
   const spy = Object.values(
-    await (await fetch('https://steamspy.com/api.php?request=tag&tag=Indie', { headers: { 'User-Agent': UA } })).json(),
+    await (await fetch('https://steamspy.com/api.php?request=tag&tag=Indie', { headers: { 'User-Agent': userAgent() } })).json(),
   )
     .filter((g) => g.positive >= 1500)
     .sort((a, b) => b.positive - a.positive);

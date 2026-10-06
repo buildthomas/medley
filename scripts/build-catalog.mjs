@@ -4,8 +4,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildAll, keepMissingGroups } from './build-all.mjs';
-import { medleyPaths } from './paths.mjs';
+import { loadEnvFiles, medleyPaths } from './paths.mjs';
 
+loadEnvFiles(); // MEDLEY_CONTACT, if set (see wd.mjs userAgent)
 const args = process.argv.slice(2);
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : undefined;
 const dir = new URL('../src/data/', import.meta.url);

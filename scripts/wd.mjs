@@ -1,6 +1,15 @@
 // Small shared helpers for the catalog builders: Wikidata SPARQL, labels, Commons images.
 
-export const UA = 'medley/0.4 (personal hobby project; catalog build; https://github.com/buildthomas)';
+/**
+ * The User-Agent for every catalog request (Wikidata, Wikipedia, AniList, AnimeThemes, SteamSpy).
+ * Wikimedia asks for a way to reach whoever runs a tool, so set MEDLEY_CONTACT (an email or URL,
+ * in .env.local or medley.env) to add yours. Unset, requests carry no personal contact: the code
+ * is public, and one person's details shouldn't go out with everyone else's builds.
+ */
+export function userAgent() {
+  const contact = process.env.MEDLEY_CONTACT?.trim();
+  return `medley/0.4 (self-hosted music radio; catalog build${contact ? `; ${contact}` : ''})`;
+}
 const ENDPOINT = 'https://query.wikidata.org/sparql';
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -8,7 +17,7 @@ export async function sparql(query, { log } = {}) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/sparql-results+json', 'User-Agent': UA },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/sparql-results+json', 'User-Agent': userAgent() },
       body: new URLSearchParams({ query }),
     }).catch(() => null);
     if (res?.ok) {
@@ -86,7 +95,7 @@ export async function commonsCredits(files, { log } = {}) {
     }).toString();
     let json = null;
     for (let attempt = 0; attempt < 5 && !json; attempt++) {
-      const res = await fetch(url, { headers: { 'User-Agent': UA } }).catch(() => null);
+      const res = await fetch(url, { headers: { 'User-Agent': userAgent() } }).catch(() => null);
       if (res?.ok) json = await res.json().catch(() => null);
       else await sleep(2000 * (attempt + 1));
     }

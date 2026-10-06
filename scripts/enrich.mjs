@@ -9,9 +9,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { wikiCovers } from './wiki-covers.mjs';
-import { sparql as wdSparql } from './wd.mjs';
+import { sparql as wdSparql, userAgent } from './wd.mjs';
 
-const UA = 'medley/0.4 (personal hobby project; catalog build)';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Retries network errors and responses cut off mid-stream (see gotchas).
@@ -173,7 +172,7 @@ export async function enrichGames(games, { log = console.log, cacheFile } = {}) 
   let n = 0;
   for (const g of missing) {
     try {
-      const res = await fetch(`https://steamspy.com/api.php?request=appdetails&appid=${g.steam}`, { headers: { 'User-Agent': UA } });
+      const res = await fetch(`https://steamspy.com/api.php?request=appdetails&appid=${g.steam}`, { headers: { 'User-Agent': userAgent() } });
       const data = res.ok ? await res.json() : null;
       const tags = data?.tags && !Array.isArray(data.tags) ? data.tags : {};
       cache[g.steam] = Object.entries(tags)

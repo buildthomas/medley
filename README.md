@@ -154,3 +154,12 @@ collection.
 ## For contributors and AI agents
 
 Start with [AGENTS.md](AGENTS.md), then [docs/](docs/README.md).
+
+## License
+
+The code is [CC BY-NC-SA 4.0](LICENSE): share and adapt it with credit, not commercially,
+and changed versions keep the same license.
+The bundled catalogs in `src/data/` are facts gathered from the
+sources above and keep their terms: Wikidata is CC0; AniList and AnimeThemes data is for
+non-commercial use; covers are links to the original images, not copies. Medley doesn't
+host or download any music: everything plays through YouTube's embedded player.

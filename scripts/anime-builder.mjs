@@ -5,7 +5,7 @@
 //                     popularity, format (TV / movie / ONA…)
 //   AnimeThemes       OP/ED/IN per anime: sequence, song title, artists, episodes
 
-import { sleep, UA } from './wd.mjs';
+import { sleep, userAgent } from './wd.mjs';
 
 const ANILIST = 'https://graphql.anilist.co';
 const THEMES = 'https://api.animethemes.moe';
@@ -32,7 +32,7 @@ async function anilistPage(page, log) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch(ANILIST, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': UA },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': userAgent() },
       body: JSON.stringify({ query: QUERY, variables: { page } }),
     }).catch(() => null);
     if (res?.ok) return (await res.json()).data.Page.media;
@@ -57,7 +57,7 @@ async function themesFor(anilistIds, log) {
     });
     let body = null;
     for (let attempt = 0; attempt < 5 && !body; attempt++) {
-      const res = await fetch(`${THEMES}/anime?${params}`, { headers: { 'User-Agent': UA, Accept: 'application/json' } }).catch(() => null);
+      const res = await fetch(`${THEMES}/anime?${params}`, { headers: { 'User-Agent': userAgent(), Accept: 'application/json' } }).catch(() => null);
       if (res?.ok) body = await res.json();
       else await sleep(3000 * (attempt + 1));
     }

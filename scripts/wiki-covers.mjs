@@ -2,7 +2,7 @@
 // Wikipedia rate-limits bursts, so requests are paced and retried with backoff;
 // a silently skipped batch once cost us ~90% of covers.
 
-const UA = 'medley/0.4 (personal hobby project; catalog build)';
+import { userAgent } from './wd.mjs';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchBatch(titles, log) {
@@ -19,7 +19,7 @@ async function fetchBatch(titles, log) {
   });
   for (let attempt = 0; attempt < 6; attempt++) {
     try {
-      const res = await fetch(`https://en.wikipedia.org/w/api.php?${params}`, { headers: { 'User-Agent': UA } });
+      const res = await fetch(`https://en.wikipedia.org/w/api.php?${params}`, { headers: { 'User-Agent': userAgent() } });
       if (res.ok) {
         const body = await res.json();
         if (!body.error) return body.query ?? {};
