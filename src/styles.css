@@ -134,6 +134,18 @@ button.liked,
 button.icon.liked {
   color: var(--accent);
 }
+/* ▶ in track and title rows: a comfortable target around the small icon. */
+button.icon.play-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 8px;
+}
+button.icon.play-btn:hover:not(:disabled) {
+  background: var(--bg-sunken);
+}
 
 input:not([type='checkbox']):not([type='range']),
 textarea {

@@ -55,7 +55,9 @@ chips but keeps the sliders.
 ## Session (src/useSession.ts)
 
 - Live queries: all works, all tracks, last 400 plays.
-- Queue effect: drops queued tracks that no longer pass filters, tops up to 4.
+- Queue effect: drops queued tracks that no longer pass filters, tops up to 4 (also right after
+  the queue is emptied). Variety and Familiarity only weight picks, so a change to either
+  re-picks the whole queue once the slider settles (300 ms). Programs ignore both.
 - **Program:** `playProgram(label, ids, { shuffle })` plays an explicit list first (in album order
   from title pages, `lib/trackOrder.ts`) (title page
   ▶ Play / ⤮ Shuffle, *Play what's new*, track search *Play all*). It ignores filters except

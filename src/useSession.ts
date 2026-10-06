@@ -76,6 +76,19 @@ export function useSession(filters: Filters) {
     [trackMap],
   );
 
+  // Variety and Familiarity only weight the picks (every queued track still passes), so the
+  // queue below would keep its old picks. Re-pick it once the slider settles instead.
+  const weights = `${filters.variety}|${filters.familiarity}`;
+  const lastWeights = useRef(weights);
+  useEffect(() => {
+    if (weights === lastWeights.current) return;
+    const timer = setTimeout(() => {
+      lastWeights.current = weights;
+      setQueueIds([]);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [weights]);
+
   // Keep the up-next queue valid for the current filters and topped up.
   useEffect(() => {
     if (!tracks.length) return;
@@ -90,7 +103,9 @@ export function useSession(filters: Filters) {
       }
       return kept.length === q.length && kept.every((id, i) => id === q[i]) ? q : kept;
     });
-  }, [games, tracks, filters, currentId, isPlayable, history]);
+    // queueIds too, so emptying it (reshuffle, a Variety change) refills it right away. The
+    // updater returns the same array when nothing changes, so this doesn't loop.
+  }, [games, tracks, filters, currentId, isPlayable, history, queueIds]);
 
   /**
    * Switch to a track. The UI updates immediately; bookkeeping (play row, counters, and an
